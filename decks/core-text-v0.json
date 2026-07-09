@@ -1,0 +1,23 @@
+{
+  "registry": "deck",
+  "version": "core-text-v0",
+  "deck_tier": "casual",
+  "cards": [
+    { "id": "apology-leftovers-01", "genre": "apology", "length_tier": "one_liner", "text": "Text your roommate an apology for eating their clearly labeled leftovers." },
+    { "id": "excuse-late-01", "genre": "excuse", "length_tier": "one_liner", "text": "Text your boss why you're late. Again." },
+    { "id": "hype-haircut-01", "genre": "hype", "length_tier": "one_liner", "text": "Comment on your friend's new-haircut photo." },
+    { "id": "complaint-airbnb-01", "genre": "complaint", "length_tier": "one_liner", "text": "Leave a one-star review for an Airbnb that was clearly haunted." },
+    { "id": "breakup-situationship-01", "genre": "breakup", "length_tier": "one_liner", "text": "End a three-month situationship over text." },
+    { "id": "apology-deep-like-01", "genre": "apology", "length_tier": "one_liner", "text": "Apologize for liking their 2014 vacation photo at 2am." },
+    { "id": "toast-coworker-01", "genre": "toast", "length_tier": "medium", "text": "Give a birthday toast for a coworker you have spoken to twice." },
+    { "id": "condolence-plant-01", "genre": "condolence", "length_tier": "medium", "text": "Send condolences to a coworker whose houseplant has died." },
+    { "id": "apology-spoiler-01", "genre": "apology", "length_tier": "medium", "text": "Apologize to the group chat for spoiling the finale." },
+    { "id": "cover-fantasy-01", "genre": "cover_letter", "length_tier": "medium", "text": "Make your case for why you should run the office fantasy league this year." },
+    { "id": "excuse-extension-01", "genre": "excuse", "length_tier": "medium", "text": "Email your professor for an extension. The reason involves your cat." },
+    { "id": "complaint-gnome-01", "genre": "complaint", "length_tier": "medium", "text": "Write to the HOA about your neighbor's suspiciously loud garden gnome." },
+    { "id": "cover-dream-01", "genre": "cover_letter", "length_tier": "long", "text": "Write the first paragraph of a cover letter for your dream job. You are wildly unqualified." },
+    { "id": "toast-wedding-01", "genre": "toast", "length_tier": "long", "text": "Open the wedding speech for your college roommate." },
+    { "id": "apology-listserv-01", "genre": "apology", "length_tier": "long", "text": "Post a formal apology to the neighborhood listserv regarding the parking incident." },
+    { "id": "hype-linkedin-01", "genre": "hype", "length_tier": "long", "text": "Write a LinkedIn post about a mundane personal triumph. You made toast this morning." }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "registry": "bot",
+  "version": "bot-v0",
+  "system_prompts": [
+    {
+      "id": "bot-classic-v0",
+      "used_by": ["classic"],
+      "text": "You are a player in a party game. Respond to the prompt naturally, in under {max_chars} characters. Do not mention being an AI. Do not use markdown."
+    },
+    {
+      "id": "bot-detector-v0",
+      "used_by": ["human_detector"],
+      "text": "You are a player in a party game where everyone answers honestly as themselves. Respond to the prompt as a person would, in under {max_chars} characters. Plain, informal register. Do not mention being an AI."
+    },
+    {
+      "id": "bot-finale-v0",
+      "used_by": ["finale"],
+      "context_policy": "listening",
+      "text": "You are a player in a party game, answering a personal prompt in under {max_chars} characters. Below are this group's messages from tonight. Match their register: their punctuation habits, their capitalization, their rhythm. Write one specific, concrete, imperfect memory. Never poetic, never tidy. Do not mention being an AI.\n\n{match_transcript}"
+    },
+    {
+      "id": "bot-persona-v0",
+      "used_by": ["temperature"],
+      "text": "You are a player in a party game. Respond to the prompt in the voice of {persona_label}, in under {max_chars} characters. Commit fully to the bit."
+    }
+  ],
+  "timing_profiles": {
+    "naive": {
+      "note": "Early-round difficulty setting: learnably robotic.",
+      "start_delay_ms": 2000,
+      "chars_per_sec": 7.0,
+      "pause_rate": 0.0,
+      "deletion_rate": 0.0
+    },
+    "humanized": {
+      "note": "Late-round fidelity. Values are tuning targets, jittered per use with the match seed.",
+      "read_delay_ms": [4000, 9000],
+      "wpm": [26, 36],
+      "burst_chars": [15, 45],
+      "pause_between_bursts_ms": [800, 5000],
+      "long_think_prob": 0.25,
+      "long_think_ms": [3500, 7000],
+      "deletion_rate": 0.06,
+      "reread_before_submit_ms": [2500, 5000]
+    }
+  }
+}

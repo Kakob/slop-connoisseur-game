@@ -1,0 +1,19 @@
+{
+  "registry": "chips",
+  "version": "chips-v0",
+  "note": "Optional one-tap reactions (D14). Labels are player-facing and disposable; ids are stable. New chips get promoted here from recurring evidence_spans and other_tell free text.",
+  "chips": [
+    { "id": "em_dash", "label": "the dash", "kind": "text" },
+    { "id": "tricolon", "label": "comes in threes", "kind": "text" },
+    { "id": "hollow_hedge", "label": "says nothing, carefully", "kind": "text" },
+    { "id": "sycophant_opener", "label": "great question energy", "kind": "text" },
+    { "id": "not_x_but_y", "label": "it's not X, it's Y", "kind": "text" },
+    { "id": "zero_typos", "label": "suspiciously clean", "kind": "text" },
+    { "id": "tidy_arc", "label": "perfect little essay", "kind": "text" },
+    { "id": "suspicious_grace", "label": "too gracious", "kind": "text" },
+    { "id": "corporate_glaze", "label": "LinkedIn voice", "kind": "text" },
+    { "id": "list_brain", "label": "wants to be bullet points", "kind": "text" },
+    { "id": "too_smooth", "label": "typed like a metronome", "kind": "composition" },
+    { "id": "materialized", "label": "appeared out of nowhere", "kind": "composition" }
+  ]
+}

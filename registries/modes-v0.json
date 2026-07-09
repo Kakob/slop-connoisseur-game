@@ -1,0 +1,92 @@
+{
+  "registry": "modes",
+  "version": "modes-v0",
+  "modes": [
+    {
+      "id": "classic",
+      "status": "v1",
+      "verbs": ["forge", "detect"],
+      "domain": "text",
+      "vote_rubric": "find_the_bot",
+      "judges": ["peer"],
+      "description": "Everyone forges slop; one entry is the live model. Find it. The spine of the night."
+    },
+    {
+      "id": "slop",
+      "status": "v1",
+      "verbs": ["forge"],
+      "domain": "text",
+      "vote_rubric": "funniest",
+      "judges": ["peer"],
+      "description": "Warm-up. Funniest stereotypical AI response wins; no ground truth, pure performance. Burns off the loud parody so Classic forgeries get subtle."
+    },
+    {
+      "id": "human_detector",
+      "status": "v1",
+      "verbs": ["detect"],
+      "domain": "text",
+      "vote_rubric": "find_the_bot",
+      "judges": ["peer"],
+      "description": "Inverted Classic: everyone writes authentically; the bot tries to pass as human. Daytime version of the finale; yields the authentic-human corpus class."
+    },
+    {
+      "id": "temperature",
+      "status": "v1",
+      "verbs": ["forge", "detect"],
+      "domain": "text",
+      "vote_rubric": "match_personas",
+      "judges": ["peer"],
+      "description": "Secret persona cards (Corporate GPT, Therapist GPT...); same prompt; table attributes responses to personas. Best read-aloud mode."
+    },
+    {
+      "id": "finale",
+      "status": "v1",
+      "verbs": ["detect"],
+      "domain": "text",
+      "vote_rubric": "find_the_bot",
+      "judges": ["peer"],
+      "trigger": { "kind": "bot_escaped", "min_rounds": 2 },
+      "deck_id": "finale-v0",
+      "description": "Earned only. Bot enters with listening context, intimate prompt deck, big pot. Two endings per night: humanity holds, or it got in."
+    },
+    {
+      "id": "jailbreak",
+      "status": "mode_extension",
+      "verbs": ["steer"],
+      "domain": "text",
+      "vote_rubric": "objective_bets",
+      "judges": ["peer", "model_narrator"],
+      "description": "Secret objective; steer the live model toward it in 3 exchanges while the table bets and guesses the objective. Needs exchange.message engine support."
+    },
+    {
+      "id": "does_it_run",
+      "status": "mode_extension",
+      "verbs": ["forge", "detect"],
+      "domain": "code",
+      "vote_rubric": "bet_on_execution",
+      "judges": ["harness", "peer"],
+      "min_deck_tier": "mixed",
+      "description": "Forge plausible-looking code; table bets on which snippets pass hidden tests; harness runs them live, lights one at a time."
+    },
+    {
+      "id": "prompt_battle",
+      "status": "mode_extension",
+      "verbs": ["steer"],
+      "domain": "code",
+      "vote_rubric": "bet_on_execution",
+      "judges": ["harness", "model_narrator", "peer"],
+      "min_deck_tier": "casual",
+      "description": "Nobody types code: 60s to write a prompt; generations race the tests during the read-aloud/betting overlap. The accessible code mode — casual tier by design."
+    },
+    {
+      "id": "spot_the_bug",
+      "status": "mode_extension",
+      "verbs": ["detect"],
+      "domain": "code",
+      "vote_rubric": "find_the_bug",
+      "judges": ["harness", "peer"],
+      "min_deck_tier": "mixed",
+      "description": "Bot presents a solution with one injected flaw; first to name the line. Run it and watch it fail weirdly for the vibes-based players."
+    }
+  ]
+}

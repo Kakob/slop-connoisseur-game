@@ -1,0 +1,25 @@
+{
+  "registry": "deck",
+  "version": "personas-and-finale-v0",
+  "personas": [
+    { "id": "corporate_gpt", "label": "Corporate GPT" },
+    { "id": "therapist_gpt", "label": "Therapist GPT" },
+    { "id": "shakespeare_gpt", "label": "Shakespeare GPT" },
+    { "id": "genz_gpt", "label": "Gen Z GPT" },
+    { "id": "passive_aggressive_gpt", "label": "Passive-Aggressive GPT" },
+    { "id": "pirate_gpt", "label": "Pirate GPT" },
+    { "id": "doomer_gpt", "label": "Doomer GPT" },
+    { "id": "wellness_gpt", "label": "Wellness-Influencer GPT" }
+  ],
+  "finale_deck": {
+    "id": "finale-v0",
+    "deck_tier": "casual",
+    "note": "Intimate prompts, medium tier, used only in the earned finale. The bot answers these with listening context.",
+    "cards": [
+      { "id": "finale-smell-01", "genre": "memory", "length_tier": "medium", "text": "A smell from childhood you still think about." },
+      { "id": "finale-miss-01", "genre": "memory", "length_tier": "medium", "text": "Something you miss that you've never told anyone." },
+      { "id": "finale-bedroom-01", "genre": "memory", "length_tier": "medium", "text": "Describe your childhood bedroom." },
+      { "id": "finale-kindness-01", "genre": "memory", "length_tier": "medium", "text": "A small kindness someone did for you that you never repaid." }
+    ]
+  }
+}

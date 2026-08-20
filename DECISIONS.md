@@ -357,3 +357,11 @@ succeed. Payloads come exclusively from `buildWriterContext`.
 least one appearance. Studio experiments and never-shown duplicate-retry
 drafts stay out of round writer context; only text that actually reached a
 table becomes persona history.
+
+### D54. `M{x.y}` commits stay reserved for SPEC §36 milestones
+The subscription provider and the /studio surface are out-of-spec additions
+(SPEC §36 already defines M0.6 as the Playtest pass), so they use `feat:`
+commit prefixes. Inventing new M-numbers would fake spec provenance.
+`/studio` follows the /lab conventions: developer-only by convention (D38),
+no auth, intentionally plain, full provenance visible (it is a post-reveal-
+equivalent surface).

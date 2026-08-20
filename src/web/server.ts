@@ -9,6 +9,14 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MachineGenerationError } from "../engine/machines.js";
 import { listRounds, roundReport } from "../lab/report.js";
+import {
+  createPrompt,
+  editPrompt,
+  listStudioPrompts,
+  listStudioRuns,
+  runStudioGeneration,
+  setPromptActive,
+} from "../lab/studio.js";
 import { GameSession, type GameEnv } from "./session.js";
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "public");
@@ -55,6 +63,7 @@ export function createGameServer(env: GameEnv): http.Server {
     try {
       if (route === "GET /") return serveStatic(res, "index.html");
       if (route === "GET /lab") return serveStatic(res, "lab.html");
+      if (route === "GET /studio") return serveStatic(res, "studio.html");
       if (req.method === "GET" && !url.pathname.startsWith("/api/")) {
         return serveStatic(res, url.pathname.slice(1));
       }
@@ -66,6 +75,42 @@ export function createGameServer(env: GameEnv): http.Server {
       const labMatch = url.pathname.match(/^\/api\/lab\/round\/([^/]+)$/);
       if (req.method === "GET" && labMatch) {
         return json(res, 200, roundReport(env.store, labMatch[1]!, env.tunables));
+      }
+
+      // Studio (developer-only authoring/curation surface, D51/D52).
+      if (route === "GET /api/studio/prompts") {
+        return json(res, 200, listStudioPrompts(env.store));
+      }
+      if (route === "POST /api/studio/prompts") {
+        const body = await readBody(req);
+        if (typeof body.text !== "string") return json(res, 400, { error: "text required" });
+        return json(res, 200, createPrompt(env.store, env.clock, env.idGen, body.text));
+      }
+      const studioPromptMatch = url.pathname.match(/^\/api\/studio\/prompt\/([^/]+)\/(edit|active)$/);
+      if (req.method === "POST" && studioPromptMatch) {
+        const [, promptId, action] = studioPromptMatch;
+        const body = await readBody(req);
+        if (action === "edit") {
+          if (typeof body.text !== "string") return json(res, 400, { error: "text required" });
+          return json(res, 200, editPrompt(env.store, env.clock, env.idGen, promptId!, body.text));
+        }
+        if (typeof body.active !== "boolean") return json(res, 400, { error: "active required" });
+        return json(res, 200, setPromptActive(env.store, env.clock, env.idGen, promptId!, body.active));
+      }
+      if (route === "POST /api/studio/generate") {
+        const body = await readBody(req);
+        if (typeof body.promptId !== "string") return json(res, 400, { error: "promptId required" });
+        const deps = {
+          store: env.store,
+          provider: env.provider,
+          tunables: env.tunables,
+          clock: env.clock,
+          idGen: env.idGen,
+        };
+        return json(res, 200, await runStudioGeneration(deps, body.promptId));
+      }
+      if (route === "GET /api/studio/runs") {
+        return json(res, 200, listStudioRuns(env.store));
       }
 
       if (route === "POST /api/round") {

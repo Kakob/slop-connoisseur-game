@@ -336,3 +336,10 @@ tuning choice.
 Deviates from CLAUDE.md's "exactly one smoke test" letter — one gated live
 test per live provider. Both are skipped by default; the mock-only law for
 the regular suite is intact.
+
+### D51. Curation is append-only promptStatus events; edits are descendant prompts
+Prompts stay immutable (`MUTABLE_KINDS` unchanged). A prompt's effective
+active flag is derived: latest `promptStatus` record wins, else the seed
+value. Text edits insert a child prompt (`source: "user"`, `parentPromptId`)
+plus the first-ever `promptDerivation` records (operation "edit") and
+deactivate the parent. Every curation act is a persisted record.

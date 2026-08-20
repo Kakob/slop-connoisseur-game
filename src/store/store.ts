@@ -15,6 +15,7 @@ import type {
   GamePrompt,
   Judgment,
   PromptDerivation,
+  PromptStatus,
   Round,
   Specimen,
   SpecimenDerivation,
@@ -23,6 +24,7 @@ import type {
 export type EntityKind =
   | "prompt"
   | "promptDerivation"
+  | "promptStatus"
   | "contestant"
   | "round"
   | "specimen"
@@ -35,6 +37,7 @@ export type EntityKind =
 type KindMap = {
   prompt: GamePrompt;
   promptDerivation: PromptDerivation;
+  promptStatus: PromptStatus;
   contestant: Contestant;
   round: Round;
   specimen: Specimen;
@@ -48,6 +51,7 @@ type KindMap = {
 const ALL_KINDS: EntityKind[] = [
   "prompt",
   "promptDerivation",
+  "promptStatus",
   "contestant",
   "round",
   "specimen",

@@ -93,4 +93,15 @@ describe("GameStore", () => {
     fs.writeFileSync(path.join(dir, "specimen.jsonl"), "not json\n");
     expect(() => GameStore.open(dir)).toThrow(/Malformed record/);
   });
+
+  it("stores promptStatus as an immutable kind and reloads it from JSONL", () => {
+    const dir = tmpDir();
+    const store = GameStore.open(dir);
+    const status = { id: "ps1", promptId: "p1", active: false, createdAt: "2026-08-20T00:00:00.000Z" };
+    store.insert("promptStatus", status);
+    expect(() => store.update("promptStatus", { ...status, active: true })).toThrow(/immutable/);
+
+    const reloaded = GameStore.open(dir);
+    expect(reloaded.get("promptStatus", "ps1").active).toBe(false);
+  });
 });

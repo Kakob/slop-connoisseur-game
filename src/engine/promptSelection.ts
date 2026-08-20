@@ -5,9 +5,15 @@ import type { Rng } from "../domain/runtime.js";
 import type { GamePrompt } from "../domain/types.js";
 import type { GameStore } from "../store/store.js";
 
+/** Derives a prompt's effective active flag: latest promptStatus record wins, else the seed value (D51). */
+export function isPromptActive(store: GameStore, prompt: GamePrompt): boolean {
+  const statuses = store.where("promptStatus", (s) => s.promptId === prompt.id);
+  return statuses.length > 0 ? statuses[statuses.length - 1]!.active : prompt.active;
+}
+
 /** Derives the next round's prompt from active prompts, preferring unplayed ones. */
 export function selectPrompt(store: GameStore, rng: Rng, tunables: Tunables): GamePrompt {
-  const active = store.where("prompt", (p) => p.active);
+  const active = store.where("prompt", (p) => isPromptActive(store, p));
   if (active.length === 0) throw new Error("No active prompts available");
 
   let pool = active;

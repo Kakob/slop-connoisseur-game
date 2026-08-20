@@ -26,6 +26,17 @@ export type PromptDerivation = {
   createdAt: string;
 };
 
+/**
+ * Append-only curation event (D51): the latest record for a promptId decides
+ * its effective active flag, overriding the prompt's seed `active` value.
+ */
+export type PromptStatus = {
+  id: string;
+  promptId: string;
+  active: boolean;
+  createdAt: string;
+};
+
 // ---------------------------------------------------------------------------
 // Contestants and personas (§6, §7)
 // ---------------------------------------------------------------------------

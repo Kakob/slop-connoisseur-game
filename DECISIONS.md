@@ -311,3 +311,28 @@ The "no hidden provenance in payloads" acceptance (M0.0/M0.3) is verified by
 planting sentinel values in every hidden field and asserting they never appear
 in any assembled payload, plus structural checks on builder signatures. This
 is a testing strategy choice; the spec only states the boundary requirement.
+
+---
+
+## 11. Post-M0 additions (outside SPEC §36)
+
+### D48. Subscription-billed provider via the Claude Agent SDK
+The Messages API cannot bill a Claude subscription; the Agent SDK's Claude
+Code harness can (Anthropic help center, June 2026). `ClaudeAgentProvider`
+strips `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` from the child env because
+a set key silently overrides subscription login in non-interactive mode
+(official docs). `maxTokens` is accepted but unenforced — the SDK exposes no
+per-call output cap; the word-cap retry and judge choice-parse above the
+provider are the real guards. Default provider flipped to `claude-agent`
+(human decision in-session); `--provider anthropic` and `--mock` remain.
+
+### D49. Agent-SDK calls are structurally tool-less and context-isolated
+`tools: []`, `settingSources: []`, plain-string `systemPrompt`, `maxTurns: 1`,
+neutral `cwd`. This is the SPEC §16/§33 law applied to a harness that
+defaults to filesystem access; any relaxation is a boundary breach, not a
+tuning choice.
+
+### D50. Second gated live smoke (`RUN_AGENT_SMOKE=1`)
+Deviates from CLAUDE.md's "exactly one smoke test" letter — one gated live
+test per live provider. Both are skipped by default; the mock-only law for
+the regular suite is intact.

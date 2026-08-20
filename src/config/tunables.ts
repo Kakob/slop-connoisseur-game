@@ -7,6 +7,8 @@ export type RiskTier = {
   multiplier: number;
 };
 
+import type { ProviderName } from "../providers/factory.js";
+
 export type Tunables = {
   humanWritingSeconds: number;
   maxResponseWords: number;
@@ -37,7 +39,7 @@ export type Tunables = {
   };
 
   provider: {
-    name: string;
+    name: ProviderName;
     model: string;
     /** Token headroom for short responses plus adaptive thinking. */
     maxTokens: number;
@@ -75,7 +77,9 @@ export const defaultTunables: Tunables = {
   },
 
   provider: {
-    name: "anthropic",
+    // Subscription-billed via the Claude Code login by default (D48);
+    // `--provider anthropic` selects API-key billing.
+    name: "claude-agent",
     model: "claude-opus-5",
     maxTokens: 4000,
   },

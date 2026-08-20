@@ -215,6 +215,7 @@ export type GameEventType =
   | "human_timed_out_blank"
   | "machine_generation_started"
   | "machine_generated"
+  | "machine_generation_retried"
   | "machine_generation_failed"
   | "submissions_locked"
   | "judging_started"

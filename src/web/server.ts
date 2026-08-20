@@ -8,6 +8,7 @@ import * as http from "node:http";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MachineGenerationError } from "../engine/machines.js";
+import { listRounds, roundReport } from "../lab/report.js";
 import { GameSession, type GameEnv } from "./session.js";
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "public");
@@ -53,8 +54,18 @@ export function createGameServer(env: GameEnv): http.Server {
 
     try {
       if (route === "GET /") return serveStatic(res, "index.html");
-      if (req.method === "GET" && !url.pathname.startsWith("/api/") && url.pathname !== "/lab") {
+      if (route === "GET /lab") return serveStatic(res, "lab.html");
+      if (req.method === "GET" && !url.pathname.startsWith("/api/")) {
         return serveStatic(res, url.pathname.slice(1));
+      }
+
+      // Slop Lab (developer-only debug surface, §28).
+      if (route === "GET /api/lab/rounds") {
+        return json(res, 200, listRounds(env.store));
+      }
+      const labMatch = url.pathname.match(/^\/api\/lab\/round\/([^/]+)$/);
+      if (req.method === "GET" && labMatch) {
+        return json(res, 200, roundReport(env.store, labMatch[1]!, env.tunables));
       }
 
       if (route === "POST /api/round") {

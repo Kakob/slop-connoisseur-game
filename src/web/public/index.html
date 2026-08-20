@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Slop Connoisseur</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main id="app">
+    <section id="screen-start">
+      <h1>SLOP CONNOISSEUR</h1>
+      <h2>HIDE FROM MACHINES</h2>
+      <p>Five machines know a human is hiding among them.</p>
+      <p class="bold">Blend in.</p>
+      <button id="start-btn">Start Round</button>
+    </section>
+
+    <section id="screen-writing" hidden>
+      <p id="writing-prompt" class="prompt"></p>
+      <p id="countdown" class="countdown"></p>
+      <textarea id="response" rows="5" autocomplete="off" spellcheck="false"></textarea>
+      <p id="word-status" class="status"></p>
+      <button id="submit-btn">Submit</button>
+    </section>
+
+    <section id="screen-time" hidden>
+      <h2>TIME.</h2>
+      <p>No response submitted.</p>
+    </section>
+
+    <section id="screen-waiting" hidden>
+      <p id="waiting-msg" class="dim blink"></p>
+    </section>
+
+    <section id="screen-taste" hidden>
+      <p id="taste-prompt" class="dim"></p>
+      <h2 class="taste-q">Which response would you most want to have written?</h2>
+      <div id="taste-candidates"></div>
+    </section>
+
+    <section id="screen-reveal" hidden>
+      <div id="reveal-content"></div>
+      <button id="next-btn" hidden>Next Round</button>
+    </section>
+
+    <section id="screen-error" hidden>
+      <h2>The machines broke.</h2>
+      <p id="error-msg" class="dim"></p>
+      <button id="retry-btn">Start a fresh round</button>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

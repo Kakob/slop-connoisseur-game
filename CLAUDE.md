@@ -23,13 +23,14 @@ A standalone prototype game about humans and machines recognizing, imitating, an
 - **Commit at every green milestone** with message `M{x.y}: {description}` matching SPEC §36 milestones. Never batch multiple milestones into one commit.
 - **Timebox**: if a single milestone exceeds ~45 minutes of effort, stop, commit WIP on a branch, and write QUESTIONS.md.
 - **The real API is smoke-only.** All tests use the deterministic `MockModelProvider`. Exactly one smoke test hits the live Anthropic API, gated behind `RUN_SMOKE=1`, skipped otherwise.
-- **No new dependencies** beyond package.json without noting the reason in the commit message. No frameworks. This is a library + terminal game.
+- **No new dependencies** beyond package.json without noting the reason in the commit message. No frameworks. This is a library + minimal local web app (vanilla HTML/JS served by `node:http`).
 - **Never modify `SPEC-prototype.md` or `DIRECTION-RESET.md`** without an explicit human instruction in this session. If implementation pressure suggests a spec change, STOP and write the case in QUESTIONS.md instead.
 
 ## Stack and layout
-- TypeScript strict, Node 22, Vitest, ESM. No frontend framework — the M0 surface is a terminal game.
-- `src/config/` tunables · `src/domain/` entity types + ids · `src/store/` append-only persistence · `src/engine/` round state machine, anonymization · `src/scoring/` · `src/providers/` ModelProvider interface, Anthropic impl, deterministic mock · `src/contestants/` personas + strategy versions + context builders · `src/content/` seed prompts · `src/ui/` terminal game · `src/lab/` Slop Lab debug surface · `test/`
-- Commands: `npm test` · `npm run play` (interactive Hide From Machines round in the terminal) · `npm run lab` (Slop Lab dump for a round) · `RUN_SMOKE=1 npm test` (includes live-API smoke)
+- TypeScript strict, Node 22, Vitest, ESM. No frontend framework — the M0 surface is a minimal local web app (vanilla HTML/JS, `node:http` server, no build step for the client).
+- `src/config/` tunables · `src/domain/` entity types + ids · `src/store/` append-only persistence · `src/engine/` round state machine, anonymization · `src/scoring/` · `src/providers/` ModelProvider interface, Anthropic impl, deterministic mock, offline demo · `src/contestants/` personas + strategy versions + context builders · `src/content/` seed prompts · `src/web/` GameSession + HTTP server + static client (`src/web/public/`), including the `/lab` Slop Lab debug surface · `test/`
+- Commands: `npm test` · `npm run play` (serves the game at http://localhost:8787; `npm run play -- --mock` for offline canned play) · `RUN_SMOKE=1 npm test` (includes live-API smoke)
+- API payloads to the browser are contestant-facing until reveal: pre-reveal endpoints return labels + texts only (§33); full provenance flows only through the post-reveal results and `/lab`.
 
 ## Style
 - Small pure functions over classes wherever possible. Scoring, anonymization, and state transitions are pure and take injected clock/randomness; I/O lives at the edges (providers, store, terminal).

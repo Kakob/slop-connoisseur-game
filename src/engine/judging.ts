@@ -114,6 +114,16 @@ async function judgeOnce(
   judge: Contestant,
   type: "human-detection" | "taste",
 ): Promise<Judgment | null> {
+  // Idempotent per (round, judge, type): a judging restart after partial
+  // failure re-runs only the judges without a persisted ballot (§27).
+  const existing = deps.store
+    .where(
+      "judgment",
+      (j) => j.roundId === round.id && j.judgeContestantId === judge.id && j.type === type,
+    )
+    .at(0);
+  if (existing) return existing;
+
   const persona = getPersona(judge.personaId!);
   const prompt = deps.store.get("prompt", round.promptId);
   const rows =

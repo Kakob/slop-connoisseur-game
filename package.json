@@ -17,8 +17,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "play": "tsx src/ui/main.ts",
-    "lab": "tsx src/lab/main.ts",
+    "play": "tsx src/web/main.ts",
     "typecheck": "tsc --noEmit"
   }
 }

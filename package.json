@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "fast-check": "^4.9.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "name": "slop-connoisseur",
+  "version": "0.0.1",
+  "description": "A game about humans and machines trying to recognize, imitate, and impress one another through writing.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "play": "tsx src/ui/main.ts",
+    "lab": "tsx src/lab/main.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}

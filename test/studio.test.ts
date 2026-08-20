@@ -7,10 +7,45 @@
 import { describe, expect, it } from "vitest";
 import { defaultTunables } from "../src/config/tunables.js";
 import { seededRng, testClock, testIdGen } from "../src/domain/runtime.js";
-import { ensureSeeded } from "../src/engine/setup.js";
+import { createRound, ensureSeeded } from "../src/engine/setup.js";
+import { buildAppearances, generateMachineSpecimens, type MachineDeps } from "../src/engine/machines.js";
 import { isPromptActive, selectPrompt } from "../src/engine/promptSelection.js";
-import { createPrompt, editPrompt, listStudioPrompts, setPromptActive } from "../src/lab/studio.js";
+import { revealPrompt, submitHuman } from "../src/engine/writing.js";
+import {
+  createPrompt,
+  editPrompt,
+  listStudioPrompts,
+  listStudioRuns,
+  runStudioGeneration,
+  setPromptActive,
+  type StudioDeps,
+} from "../src/lab/studio.js";
+import { contains, MockModelProvider, type MockRule } from "../src/providers/mock.js";
 import { GameStore } from "../src/store/store.js";
+
+const PERSONA_NAMES = [
+  "The Minimalist",
+  "The Anecdotalist",
+  "The Messy Thinker",
+  "The Comedian",
+  "The Earnest One",
+];
+
+function personaRules(prefix: string, overrides?: Partial<Record<string, (string | Error)[]>>): MockRule[] {
+  return PERSONA_NAMES.map((name) => ({
+    match: contains(name),
+    replies: overrides?.[name] ?? [`${prefix} ${name} answer`],
+  }));
+}
+
+function studioDeps(rules: MockRule[]) {
+  const store = GameStore.open();
+  const clock = testClock();
+  const idGen = testIdGen("studio");
+  const provider = new MockModelProvider(rules);
+  const deps: StudioDeps = { store, provider, tunables: defaultTunables, clock, idGen };
+  return { store, clock, idGen, provider, deps };
+}
 
 function studioEnv() {
   const store = GameStore.open();
@@ -136,5 +171,136 @@ describe("listStudioPrompts", () => {
     const seedRow = rows.find((r) => r.id !== authored.id)!;
     expect(seedRow.source).toBe("curated");
     expect(seedRow.active).toBe(true);
+  });
+});
+
+describe("runStudioGeneration (D52)", () => {
+  it("persists five real specimens with full provenance and one run record", async () => {
+    const { store, clock, idGen, deps } = studioDeps(personaRules("studio"));
+    ensureSeeded(store, defaultTunables, clock);
+    const prompt = createPrompt(store, clock, idGen, "A studio prompt");
+
+    const { run, specimens } = await runStudioGeneration(deps, prompt.id);
+
+    expect(specimens).toHaveLength(5);
+    expect(new Set(specimens.map((s) => s.modelMetadata!.personaId)).size).toBe(5);
+    for (const s of specimens) {
+      expect(s.creatorType).toBe("model");
+      expect(s.promptId).toBe(prompt.id);
+      expect(s.modelMetadata!.provider).toBe("mock");
+      expect(s.modelMetadata!.strategyId).toBe("base-impostor");
+      expect(store.get("specimen", s.id)).toEqual(s);
+    }
+    expect(run.promptId).toBe(prompt.id);
+    expect(run.specimenIds).toEqual(specimens.map((s) => s.id));
+    expect(store.get("studioRun", run.id)).toEqual(run);
+  });
+
+  it("creates no rounds, no appearances, and no events", async () => {
+    const { store, clock, idGen, deps } = studioDeps(personaRules("studio"));
+    ensureSeeded(store, defaultTunables, clock);
+    const prompt = createPrompt(store, clock, idGen, "A studio prompt");
+
+    await runStudioGeneration(deps, prompt.id);
+
+    expect(store.all("round")).toHaveLength(0);
+    expect(store.all("appearance")).toHaveLength(0);
+    expect(store.all("event")).toHaveLength(0);
+  });
+
+  it("throws naming the failed contestant and records no run on permanent failure", async () => {
+    const boom = new Error("provider down");
+    const { store, clock, idGen, deps } = studioDeps(
+      personaRules("studio", { "The Comedian": [boom, boom, boom, boom] }),
+    );
+    ensureSeeded(store, defaultTunables, clock);
+    const prompt = createPrompt(store, clock, idGen, "A doomed prompt");
+
+    await expect(runStudioGeneration(deps, prompt.id)).rejects.toThrow(
+      /machine-comedian.*provider down/,
+    );
+    expect(store.all("studioRun")).toHaveLength(0);
+    expect(store.all("specimen")).toHaveLength(0);
+  });
+
+  it("never leaks hidden prompt metadata or ids into provider payloads", async () => {
+    const { store, clock, idGen, deps, provider } = studioDeps(personaRules("studio"));
+    ensureSeeded(store, defaultTunables, clock);
+    store.insert("prompt", {
+      id: "SECRET-PROMPT-ID",
+      text: "A perfectly visible prompt",
+      source: "user",
+      tags: ["SECRET-TAG"],
+      hypotheses: ["SECRET-HYPOTHESIS"],
+      active: true,
+      createdAt: "2026-08-20T00:00:00.000Z",
+    });
+
+    await runStudioGeneration(deps, "SECRET-PROMPT-ID");
+
+    expect(provider.calls.length).toBe(5);
+    for (const call of provider.calls) {
+      const payload = call.system + call.user;
+      expect(payload).not.toContain("SECRET-");
+      expect(payload).toContain("A perfectly visible prompt");
+    }
+  });
+
+  it("lists past runs newest-first with their specimens", async () => {
+    const { store, clock, idGen, deps } = studioDeps(personaRules("studio"));
+    ensureSeeded(store, defaultTunables, clock);
+    const a = createPrompt(store, clock, idGen, "First prompt");
+    const b = createPrompt(store, clock, idGen, "Second prompt");
+    const first = await runStudioGeneration(deps, a.id);
+    const second = await runStudioGeneration(deps, b.id);
+
+    const runs = listStudioRuns(store);
+    expect(runs.map((r) => r.run.id)).toEqual([second.run.id, first.run.id]);
+    expect(runs[0]!.specimens).toHaveLength(5);
+  });
+});
+
+describe("writer history isolation (D53)", () => {
+  it("keeps studio output out of round writer context; round output flows in once appeared", async () => {
+    const store = GameStore.open();
+    const clock = testClock();
+    const idGen = testIdGen("iso");
+    const { human, machines } = ensureSeeded(store, defaultTunables, clock);
+    const prompt = store.all("prompt")[0]!;
+
+    // 1. A studio run happens first.
+    const studioProvider = new MockModelProvider(personaRules("STUDIO-ONLY"));
+    await runStudioGeneration(
+      { store, provider: studioProvider, tunables: defaultTunables, clock, idGen },
+      prompt.id,
+    );
+
+    // 2. A real round generates: its writer payloads must not contain studio text.
+    const roundProvider = new MockModelProvider(personaRules("ROUND-ONE"));
+    const { round, events } = createRound(store, prompt.id, human, machines, clock, idGen);
+    const deps: MachineDeps = {
+      store, clock, idGen, tunables: defaultTunables, events, provider: roundProvider,
+    };
+    revealPrompt({ store, clock, idGen, tunables: defaultTunables, events }, round.id);
+    const humanSpecimen = submitHuman(
+      { store, clock, idGen, tunables: defaultTunables, events },
+      round.id,
+      "my answer",
+    );
+    const machineSpecimens = await generateMachineSpecimens(deps, store.get("round", round.id));
+    for (const call of roundProvider.calls) {
+      expect(call.system + call.user).not.toContain("STUDIO-ONLY");
+    }
+
+    // 3. After the round's table exists, its responses are history for later calls.
+    buildAppearances(deps, store.get("round", round.id), humanSpecimen, machineSpecimens, seededRng(3));
+    const laterProvider = new MockModelProvider(personaRules("LATER"));
+    await runStudioGeneration(
+      { store, provider: laterProvider, tunables: defaultTunables, clock, idGen },
+      prompt.id,
+    );
+    const laterPayloads = laterProvider.calls.map((c) => c.system + c.user).join("\n");
+    expect(laterPayloads).toContain("ROUND-ONE");
+    expect(laterPayloads).not.toContain("STUDIO-ONLY");
   });
 });

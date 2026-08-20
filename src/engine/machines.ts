@@ -35,13 +35,14 @@ export class MachineGenerationError extends Error {
 }
 
 /**
- * Derives a contestant's allowed writer history: its own past responses only
- * (§9, §16). The current round's specimen does not exist yet at generation
- * time, so everything stored for this contestant is prior-round material.
+ * Derives a contestant's allowed writer history: its own past responses that
+ * actually appeared in rounds (§9, §16; D53). The appearance filter keeps
+ * studio experiments and never-shown retry drafts out of round context.
  */
-function historyFor(store: GameStore, contestant: Contestant): WriterHistory {
+export function writerHistoryFor(store: GameStore, contestant: Contestant): WriterHistory {
+  const appearedSpecimenIds = new Set(store.all("appearance").map((a) => a.specimenId));
   const previousResponses = store
-    .where("specimen", (s) => s.creatorContestantId === contestant.id)
+    .where("specimen", (s) => s.creatorContestantId === contestant.id && appearedSpecimenIds.has(s.id))
     .map((s) => ({ promptText: store.get("prompt", s.promptId).text, responseText: s.text }));
   return { previousResponses };
 }
@@ -53,7 +54,7 @@ async function generateOne(deps: MachineDeps, round: Round, contestant: Contesta
   const context = buildWriterContext(
     prompt,
     persona,
-    historyFor(store, contestant),
+    writerHistoryFor(store, contestant),
     tunables.maxResponseWords,
   );
   events("machine_generation_started", { contestantId: contestant.id });

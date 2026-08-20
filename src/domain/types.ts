@@ -37,6 +37,20 @@ export type PromptStatus = {
   createdAt: string;
 };
 
+/**
+ * One studio generation batch (D52): real specimens produced outside any
+ * round. The run record is the audit trail; specimens gain appearances only
+ * if a future round uses them, so studio output never touches scoring.
+ */
+export type StudioRun = {
+  id: string;
+  promptId: string;
+  specimenIds: string[];
+  provider: string;
+  model: string;
+  createdAt: string;
+};
+
 // ---------------------------------------------------------------------------
 // Contestants and personas (§6, §7)
 // ---------------------------------------------------------------------------

@@ -5,10 +5,18 @@
  * Round records are never created here — only playing rounds creates rounds.
  */
 
+import type { Tunables } from "../config/tunables.js";
+import { getPersona } from "../contestants/personas.js";
+import { buildWriterContext, WRITER_STRATEGY } from "../contestants/strategies.js";
 import type { Clock, IdGen } from "../domain/runtime.js";
 import { isoNow } from "../domain/runtime.js";
-import type { GamePrompt, PromptDerivation, PromptStatus } from "../domain/types.js";
+import type { GamePrompt, PromptDerivation, PromptStatus, Specimen, StudioRun } from "../domain/types.js";
+import { ensureSeeded } from "../engine/setup.js";
 import { isPromptActive } from "../engine/promptSelection.js";
+import { writerHistoryFor } from "../engine/machines.js";
+import { countWords } from "../engine/text.js";
+import type { ModelProvider } from "../providers/provider.js";
+import { withRetries } from "../providers/provider.js";
 import type { GameStore } from "../store/store.js";
 
 export type StudioPromptRow = {
@@ -84,6 +92,108 @@ export function editPrompt(
   });
   setPromptActive(store, clock, idGen, parent.id, false);
   return { prompt, derivation };
+}
+
+export type StudioDeps = {
+  store: GameStore;
+  provider: ModelProvider;
+  tunables: Tunables;
+  clock: Clock;
+  idGen: IdGen;
+};
+
+export type StudioRunReport = {
+  run: StudioRun;
+  specimens: Specimen[];
+};
+
+/**
+ * Runs the five seeded machine personas against one prompt, persisting real
+ * specimens with full modelMetadata and zero appearances (D52). Payloads come
+ * only from buildWriterContext; no round or event records are created; the
+ * run record is written only when every persona succeeds.
+ */
+export async function runStudioGeneration(deps: StudioDeps, promptId: string): Promise<StudioRunReport> {
+  const { store, provider, tunables, clock, idGen } = deps;
+  const prompt = store.get("prompt", promptId);
+  const { machines } = ensureSeeded(store, tunables, clock);
+
+  const settled = await Promise.allSettled(
+    machines.map(async (contestant) => {
+      const persona = getPersona(contestant.personaId!);
+      const context = buildWriterContext(
+        prompt,
+        persona,
+        writerHistoryFor(store, contestant),
+        tunables.maxResponseWords,
+      );
+      const result = await withRetries(async () => {
+        const r = await provider.complete({
+          system: context.system,
+          user: context.user,
+          maxTokens: tunables.provider.maxTokens,
+        });
+        const words = countWords(r.text);
+        if (words > tunables.maxResponseWords) {
+          throw new Error(`over word cap (${words} > ${tunables.maxResponseWords})`);
+        }
+        return r;
+      }, tunables.retries.generation);
+      return { contestant, persona, result };
+    }),
+  );
+
+  const failures = settled.flatMap((s, i) =>
+    s.status === "rejected"
+      ? [`${machines[i]!.id} (${s.reason instanceof Error ? s.reason.message : String(s.reason)})`]
+      : [],
+  );
+  if (failures.length > 0) {
+    throw new Error(`Studio generation failed for: ${failures.join("; ")}`);
+  }
+
+  const generated = settled.flatMap((s) => (s.status === "fulfilled" ? [s.value] : []));
+  const specimens = generated.map(({ contestant, persona, result }) => {
+    return store.insert("specimen", {
+      id: idGen(),
+      text: result.text.trim(),
+      creatorType: "model",
+      creatorContestantId: contestant.id,
+      promptId: prompt.id,
+      createdAt: isoNow(clock),
+      wordCount: countWords(result.text),
+      isBlank: false,
+      reuseAllowed: true,
+      modelMetadata: {
+        provider: result.provider,
+        model: result.model,
+        ...(result.modelVersion !== undefined ? { modelVersion: result.modelVersion } : {}),
+        strategyId: WRITER_STRATEGY.id,
+        strategyVersion: WRITER_STRATEGY.version,
+        personaId: persona.id,
+        personaVersion: persona.version,
+        latencyMs: result.latencyMs,
+      },
+    });
+  });
+
+  const run = store.insert("studioRun", {
+    id: idGen(),
+    promptId: prompt.id,
+    specimenIds: specimens.map((s) => s.id),
+    provider: specimens[0]!.modelMetadata!.provider,
+    model: specimens[0]!.modelMetadata!.model,
+    createdAt: isoNow(clock),
+  });
+  return { run, specimens };
+}
+
+/** Derives past studio runs with their specimens, newest first. */
+export function listStudioRuns(store: GameStore): StudioRunReport[] {
+  return store
+    .all("studioRun")
+    .map((run) => ({ run, specimens: run.specimenIds.map((id) => store.get("specimen", id)) }))
+    .reverse();
 }
 
 /** Appends a curation event toggling a prompt's effective active flag; unknown ids fail loudly. */

@@ -343,3 +343,17 @@ active flag is derived: latest `promptStatus` record wins, else the seed
 value. Text edits insert a child prompt (`source: "user"`, `parentPromptId`)
 plus the first-ever `promptDerivation` records (operation "edit") and
 deactivate the parent. Every curation act is a persisted record.
+
+### D52. Studio runs are real specimens with zero appearances
+`runStudioGeneration` persists genuine Specimen records (full modelMetadata)
+grouped by an immutable `studioRun` kind. No round, appearance, or event
+records are created — events are roundId-bound and rounds exist only through
+play — so scoring (which derives from rounds/appearances/judgments) cannot
+see studio output. The run record is written only when all five personas
+succeed. Payloads come exclusively from `buildWriterContext`.
+
+### D53. Round writer history = appearance-backed specimens only
+`writerHistoryFor` filters a contestant's past responses to specimens with at
+least one appearance. Studio experiments and never-shown duplicate-retry
+drafts stay out of round writer context; only text that actually reached a
+table becomes persona history.

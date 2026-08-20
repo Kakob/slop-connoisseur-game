@@ -19,6 +19,7 @@ import type {
   Round,
   Specimen,
   SpecimenDerivation,
+  StudioRun,
 } from "../domain/types.js";
 
 export type EntityKind =
@@ -32,7 +33,8 @@ export type EntityKind =
   | "appearance"
   | "judgment"
   | "failedJudgment"
-  | "event";
+  | "event"
+  | "studioRun";
 
 type KindMap = {
   prompt: GamePrompt;
@@ -46,6 +48,7 @@ type KindMap = {
   judgment: Judgment;
   failedJudgment: FailedJudgment;
   event: GameEvent;
+  studioRun: StudioRun;
 };
 
 const ALL_KINDS: EntityKind[] = [
@@ -60,6 +63,7 @@ const ALL_KINDS: EntityKind[] = [
   "judgment",
   "failedJudgment",
   "event",
+  "studioRun",
 ];
 
 /** The only kind whose records may be re-written (round phase/timing progression). */

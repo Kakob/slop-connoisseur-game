@@ -15,9 +15,9 @@ The first playable mode is **Hide From Machines**:
 - contestants also vote on which response they most wish they had written;
 - the reveal scores both **deception** and **taste**.
 
-The next milestone is **blind challenge sharing**: complete a Hide From Machines round, send its anonymous lineup to a friend, and let them guess before revealing. See the [accepted milestone plan](./docs/next-milestone-blind-challenges.md) and [repository audit](./docs/repo-audit-2026-09-07.md).
+**Blind Tasting sharing is now implemented locally:** complete a round, open its stable challenge link in another browser, lock a guess and optional favorite, explicitly reveal, and return as creator to see completed attempts. Replay uses the original answers without model calls. See the [build and validation report](./docs/build-blind-tasting-2026-09-08.md).
 
-The agreed public name for the ordinary-prompt experience is **Blind Tasting**. **Code Tasting** is a separately specified follow-on experiment where people contribute code, judge it, predict behavior, and inspect execution. These new experiences are documented, not yet implemented. See the [product and mode specs](./docs/README.md).
+The controlled live-provider check, hosting, and 20–30-person pilot remain pending. **Code Tasting** is a separately specified follow-on experiment, not implemented.
 
 **Find The Machine**, which reverses the game for multiplayer play, remains deferred.
 
@@ -99,13 +99,19 @@ Prompts and specimens may eventually be transformed, reused, or evolved while re
 npm test                          # full offline suite (mock providers only)
 npm run play                      # live play at http://localhost:8787
 npm run play -- --mock            # offline canned play, no model calls
+npm run play -- --mock --dev-tools # local Lab and Studio enabled
+npm run report:sharing            # local JSON funnel and creator-return report
 npm run play -- --provider anthropic   # live play billed to an API key instead
 ```
 
-Developer surfaces (linked from nowhere in the game, by design):
+Developer surfaces are disabled by default, including their APIs. Enable them only for local curation with `--dev-tools`:
 
 - `http://localhost:8787/lab` — Slop Lab: hidden state, raw ballots, events for played rounds.
 - `http://localhost:8787/studio` — Slop Studio: author/curate prompts and run machine generations without editing code. Each "generate" click is five live model calls.
+
+Anonymous creator ownership is tied to this browser’s cookie (30 days); use the same browser to return through **Your challenges** on the start page. Full accounts and cross-device recovery are deferred. The server binds to loopback; generated links are local until hosting is configured. Keep the `data/` directory to preserve rounds, links, and attempts. Use a single server process for this JSONL pilot store.
+
+The offline test suite now includes localhost HTTP tests and needs permission to bind local ports. It still makes no live model calls.
 
 ### Playing on your Claude subscription (default)
 

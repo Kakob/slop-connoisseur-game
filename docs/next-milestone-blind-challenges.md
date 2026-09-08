@@ -2,7 +2,7 @@
 
 Public mode name: **Blind Tasting**. Read the [product direction](./product-direction.md) and [Blind Tasting specification](./spec-blind-tasting.md) alongside this implementation plan. Code Tasting is a separate follow-on prototype, not added scope here.
 
-**Status:** Accepted for next implementation; not yet implemented.
+**Status:** Local implementation and offline verification complete; live-provider validation, hosting, and pilot pending. See the [build report](./build-blind-tasting-2026-09-08.md).
 
 **Decision date:** September 7, 2026.
 

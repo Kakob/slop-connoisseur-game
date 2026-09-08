@@ -1,6 +1,6 @@
 # Blind Tasting specification
 
-Status: next-milestone product specification; unimplemented friend flow. Updated September 8, 2026 with spec-review decisions.
+Status: product specification with a locally implemented friend flow; live-provider validation and pilot pending. Updated September 8, 2026 with spec-review decisions. See the [build report](./build-blind-tasting-2026-09-08.md).
 
 Read with [product direction](./product-direction.md) and the [implementation milestone](./next-milestone-blind-challenges.md). Existing Hide From Machines generation, judging, and scoring laws remain in effect unless a change is explicitly recorded here.
 

@@ -6,6 +6,8 @@ Public mode name: **Blind Tasting**. Read the [product direction](./product-dire
 
 **Decision date:** September 7, 2026.
 
+**Review incorporated:** September 8, 2026. Creator-visible results are required; reading burden and length incentives are explicit pilot questions.
+
 **Basis:** The user accepted all recommendations in the [repository audit](./repo-audit-2026-09-07.md).
 
 **Priority:** Before Find The Machine multiplayer. Preserve the existing game's Detection/Taste separation and information boundaries.
@@ -27,6 +29,7 @@ This milestone includes the public-play fixes, replay interaction, reveal improv
 5. The friend chooses the human and may separately choose a favorite answer before locking the attempt.
 6. The friend explicitly reveals the result. Identity, original AI ballots, and the friend's choices are easy to compare.
 7. The friend can share that challenge or start their own Hide From Machines round.
+8. The creator returns to an owner-only results page to learn whether completed recipients found them and which answers those recipients preferred.
 
 Reopening or refreshing a challenge must not regenerate answers or silently change the lineup. Recipient attempts must not alter the original round's ballots, scores, or distinctions.
 
@@ -54,8 +57,9 @@ Reopening or refreshing a challenge must not regenerate answers or silently chan
 - Gate the result response on a locked attempt. Hiding already-downloaded provenance in the UI is insufficient.
 - Give completed rounds a share action and a useful result even when the human was easily identified. Blank rounds should be labeled honestly rather than presented as successful hiding.
 - Provide an actionable response for unknown or unavailable challenge links.
+- Add an owner-only page/API for completed recipient guesses and optional Taste picks, including empty/skipped states. Disclose this visibility to recipients before locking; do not expose unfinished choices. A public challenge link grants no owner access, and optional nicknames are self-reported.
 
-**Acceptance:** A fresh visitor sees the same six answers and positions, cannot receive the answer through the normal pre-reveal payload, can lock a guess and reveal, and can refresh without losing the locked attempt. Original ballots and results remain unchanged after any number of recipient attempts. Shared links remain valid after restart.
+**Acceptance:** A fresh visitor sees the same six answers and positions, cannot receive the answer through the normal pre-reveal payload, can lock a guess and reveal, and can refresh without losing the locked attempt. Original ballots and results remain unchanged after any number of recipient attempts. Shared links remain valid after restart. The creator can return through their session to inspect completed recipient choices; another session cannot retrieve those owner-only results.
 
 ### 3. Make the reveal work for players and spectators
 
@@ -67,7 +71,8 @@ Reopening or refreshing a challenge must not regenerate answers or silently chan
 - Add an explicit reveal button and manual pacing so a host can pause for an ordinary audience poll. Do not build a room or audience-voting service for this experiment.
 - Make prompt and answers legible on a phone and in a screen recording. Support accessible labels, keyboard operation, and a flow that does not depend on animation timing.
 - End with **Share this challenge** and **Try hiding yourself**.
-- Use **Your turn** to invite the recipient to create a challenge back. A same-prompt shortcut is optional follow-on work; attributed new-round creation and manual sharing are sufficient for this milestone.
+- Use **Now make me find you** to invite role reversal. Attributed new-round creation and manual sharing are required; a same-prompt shortcut is the first enhancement after the basic loop. Such return rounds have prior exposure and are not controlled comparisons.
+- Keep the inherited length-adjusted score secondary to recognition and preference. Preserve the formula for the initial pilot, but evaluate whether its bonus encourages padding; any later changes must preserve published result history.
 
 **Acceptance:** A viewer can read the prompt and lineup before revealing, commit a choice, and understand both who wrote each answer and who preferred it. A host can hold the reveal indefinitely. Verify the flow in an actual browser at phone and desktop widths.
 
@@ -85,8 +90,11 @@ Record events with stable challenge and anonymous attempt/session identifiers, s
 | New round started from challenge | Measure recipient conversion into a writer |
 | New round completed from challenge | Separate curiosity from completed play |
 | Recipient share action | Measure onward distribution |
+| Owner results viewed | Record a creator checking their owner page, with completed-attempt count and newest completed attempt ID; distinguish empty checks from viewing new results |
 
 Define deduplication and creator-preview handling before interpreting conversion rates. Use unique recipient attempts for the main funnel; document the limits of anonymous browser identity.
+
+Report creator return separately: among challenge owners with at least one completed recipient attempt, how many subsequently viewed those results? Track newly seen completed attempts per owner/challenge so reloads do not inflate engagement. Keep empty checks as a separate observation; do not infer off-platform conversations or identify named friends from these events.
 
 **Acceptance:** A small report can connect a challenge open to a locked guess, reveal, and downstream round or share action. Retries do not inflate these steps. Existing round-completion events alone are insufficient evidence of recipient completion.
 
@@ -94,6 +102,8 @@ Define deduplication and creator-preview handling before interpreting conversion
 
 - Recruit 20–30 people who enjoy social or guessing games.
 - Curate ordinary, funny prompts with no coding knowledge required. Any developer-themed prose pack should be tested separately; the code-writing and execution experience belongs to the separate Code Tasting prototype.
+- Favor short, distinctive responses initially. A six-answer lineup at the 70-word cap can contain 420 words; observe phone reading and record lineup length, time to lock, and abandonment without treating elapsed time as proof of reading.
+- Observe whether creators pad answers for the risk multiplier. After the pilot, document a keep/change/remove recommendation for that bonus rather than assuming length deserves more reward.
 - Observe whether players understand the opening, enjoy the reveal, and voluntarily send the link to someone.
 - Make a repeatable **prompt → guess → reveal** screen-recorded video format. Link each video to that exact round, preserving a blind opening for visitors.
 - Test spectator participation with an ordinary audience poll and manual reveal. Build dedicated audience infrastructure only if participation warrants it.
@@ -102,6 +112,8 @@ Define deduplication and creator-preview handling before interpreting conversion
 **First success signal:** A recipient completes a shared challenge by locking a guess and viewing the reveal.
 
 **Stronger signal:** That recipient shares a challenge or starts and completes their own round.
+
+**Social return signal:** The creator checks completed results or spontaneously asks whether someone has guessed. Listen for “I need to send you one” and “Did they guess yet?” Record observed conversations as qualitative evidence rather than inventing them from analytics.
 
 **Main failure to diagnose:** People enjoy the clip but few play the linked round. Compare opens, locked guesses, and reveals to locate the drop-off before adding more modes.
 
@@ -113,6 +125,7 @@ Keep the existing offline suite and TypeScript check green. Add focused tests fo
 
 - HTTP-level pre-reveal payloads and protected developer routes.
 - Player ownership and isolated streaks.
+- Owner-only completed-attempt results, denied cross-session reads, empty/skipped states, and no exposure of unfinished choices.
 - Duplicate/concurrent submissions, votes, and reveals.
 - Server-enforced deadline behavior.
 - Immutable specimen reads and stable replay after store reload.
@@ -120,6 +133,7 @@ Keep the existing offline suite and TypeScript check green. Add focused tests fo
 - Partial and absent Taste ballots.
 - Challenge and attempt persistence across restart.
 - Analytics deduplication and source attribution.
+- Owner return/new-result accounting that excludes repeat reloads from unique engagement.
 
 Run a complete offline HTTP challenge flow and browser checks on phone and desktop layouts. Before inviting the playtest group, run a controlled live round to validate the configured provider, answer quality, waiting time, and failure behavior; the audit did not establish these.
 
@@ -127,12 +141,14 @@ Run a complete offline HTTP challenge flow and browser checks on phone and deskt
 
 - A writer completes a round and obtains a working challenge link.
 - A separate visitor finishes the same blind lineup without an account or new model calls.
+- The creator can return to see completed recipient guesses and Taste choices, with recipient visibility disclosed.
 - Reveal responses preserve the distinction between identity and preference, human and AI votes, and absent and negative evidence.
 - Public routes protect hidden information and bound generation usage.
 - Retries, refreshes, and restarts do not silently change published content or duplicate votes.
 - The phone and host-controlled reveal flows are verified.
-- The recipient funnel is measurable.
+- The recipient funnel and creator return after recipient completion are measurable separately.
 - The 20–30-person pilot and initial video/poll experiment produce a written findings report and an evidence-based next decision.
+- The pilot report addresses phone reading burden and the inherited length bonus, preserving existing scoring until an explicit follow-up change.
 
 ## Deferred work
 

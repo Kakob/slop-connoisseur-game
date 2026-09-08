@@ -1,6 +1,6 @@
 # Code Tasting prototype specification
 
-Status: proposed follow-on prototype under the agreed product direction; not implementation scope for the immediate Blind Tasting milestone. Updated September 7, 2026.
+Status: proposed follow-on prototype under the agreed product direction; not implementation scope for the immediate Blind Tasting milestone. Updated September 8, 2026 with spec-review decisions.
 
 ## Promise
 
@@ -14,7 +14,7 @@ There is no required single winner. A memorable round may involve excellent huma
 
 | Dimension | Question | Evidence |
 | --- | --- | --- |
-| Authorship | Which did your friend write? | Stored provenance |
+| Authorship | Which did your friend contribute under the writing rule? | Stored submission ownership and self-reported unaided writing; not verified human authorship |
 | Taste | Which would you merge for this stated task? | Attributed choices |
 | Confidence | How sure are you about the behavior prediction? | Player's pre-execution commitment |
 | Behavior | What does this implementation actually do? | Versioned test and execution results |
@@ -29,19 +29,26 @@ AI-looking code can be preferred and behave correctly. Human-looking code can fa
 - Independently generated bot code from recorded provider/model configurations. Multiple providers are an experiment option, not an infrastructure prerequisite. Never label two same-model personas as different model families.
 - One behavior prediction per attempt, with lightweight confidence: guessing / fairly sure / very sure.
 - Optional counterexample submission after completion.
+- Omit automated AI Detection/Taste judging from this first Code Tasting experiment. The machines supply implementations; recipient judgments and execution supply the reveal.
 
-Use one problem to validate the interaction, then a few fresh problems to test learning transfer. Short bug-fix patches are a later format option.
+Compare the [three paper problem sketches](./code-tasting-problem-sketches.md) before selecting one for implementation. Use one problem to validate the interaction, then fresh problems to test learning transfer. The sketches include a small bug-fix format as an alternative, not three problems committed for launch.
+
+## Pilot writing and assistance rule
+
+Creators write without generative AI assistance. Syntax highlighting and non-generative editor completion are allowed; generated completions, chat-generated code, and pasted generated solutions are not. Show this rule before writing and ask for a self-report when submitting. Do not use a detector or claim authorship has been verified.
+
+Store who submitted the code and the self-report separately from machine-generation provenance. “Your friend's submission” is accurate; “proven human-written” is not. If someone reports using generative assistance, do not publish that submission as the pilot's unaided-human slot; offer a fresh attempt or an exit without silently relabeling it. An assisted-writing mode is outside this experiment.
 
 ## First problem candidate: dedupeById
 
 ```ts
-function dedupeById(items: Array<{ id: string | number }>): Array<{ id: string | number }>
+function dedupeById(items: Array<{ id: string | number; value: string }>): Array<{ id: string | number; value: string }>
 ```
 
 Proposed contract:
 
-- Accept a JSON array of objects, each with an `id` that is a string or finite number. Additional fields are outside this first problem's input schema.
-- Keep the first occurrence of each ID and preserve input order.
+- Accept a JSON array of objects, each with an `id` that is a string or finite number and a required string `value`. Additional fields are outside this first problem's input schema.
+- Keep the first occurrence of each ID, including its original `value`, and preserve input order. The payload makes retaining the first rather than last occurrence observable without scoring object identity.
 - Treat numeric and string IDs as distinct: `1` and `"1"` are different.
 - Compare strings exactly; do not normalize case or whitespace. Numerically equal IDs count as duplicates; `0` and `-0` count as equal.
 - Do not mutate the input array or its elements.
@@ -52,31 +59,60 @@ Freeze the input validator, expected behavior, test suite, and runtime version b
 Example diagnostic input:
 
 ```json
-[{"id":1},{"id":"1"}]
+[{"id":1,"value":"numeric"},{"id":"1","value":"string"}]
 ```
 
 For a selected snippet, ask whether it returns both elements, only the first, only the second, throws, or has another outcome. Options must match meaningful possibilities for that snippet; distinguish an infrastructure failure or execution limit from a language-level thrown exception.
+
+A separate first-occurrence case is `[{"id":1,"value":"first"},{"id":1,"value":"second"}]`, whose required result is `[{"id":1,"value":"first"}]`. The numeric/string distinction and first-occurrence rule are separate behaviors, not one combined trick.
+
+## Merge choice and diagnostic assignment
+
+Keep **Which would you merge for this task?**, with **None as written** as a first-class choice. A creator chooses among rivals or None; a recipient chooses among all three or None. Store None explicitly, separately from a missing or unfinished vote. Do not infer approval of any code from None.
+
+For the first prototype, use this settled assignment rule:
+
+1. Before collecting submissions, freeze a versioned, ordered bank of authored valid diagnostic inputs and prediction options. Include ordinary cases and edge cases; cases need not cause a failure. Examples in the sketches are proposed banks to review and freeze, not evidence about how live models perform.
+2. After first impressions lock, target the chosen merge implementation. For None, target the eligible implementation with the lowest anonymous position (excluding the creator's own submission on the creator path). Say “Trace this implementation,” not “You chose this.”
+3. Assign an input independently of the implementation's results: for per-challenge attempt ordinal `n` starting at zero, use bank index `n % bank.length`. Allocate the ordinal atomically at first-impression lock; the bank order, ordinal, input ID, and target are persisted. Count creator and recipient paths in separately recorded ordinal sequences.
+4. Return the same assignment on refresh/retry. Never switch cases because an implementation passes, fails, or produces an unexciting result.
+5. Present exact outputs plus applicable throws/other outcomes; mark unsupported execution as unavailable, not a wrong prediction. Input/output prediction is distinct from identifying the contract's desired result.
+
+This deterministic pilot rule is simple assignment, not randomized experimental design or a guarantee of balanced pass/fail outcomes. Any later targeted failure selection is a separately labeled activity such as **Find the counterexample**, not an invisible change to the prediction game.
 
 ## Creator flow
 
 1. See the task contract and the friend-challenge invitation before writing.
 2. Write and run allowed visible examples without seeing rival code. Lock the submission before comparing implementations.
-3. Choose another implementation to merge and predict a rival's behavior, with confidence.
+3. Choose another implementation to merge or **None as written**, then predict the assigned rival's behavior with confidence under the frozen assignment rule.
 4. Explicitly reveal behavior and any collected judgments, with source attribution.
 5. Share the fixed lineup; optionally try a counterexample against a rival.
 
-The creator knows their own submission and must not be asked to identify it. Whether the first prototype also collects automated AI Detection/Taste ballots is an open scope choice; if included, reuse the separate blind judging design and record the actual model. Do not fabricate such votes if omitted.
+The creator knows their own submission and must not be asked to identify it. Do not collect automated AI judging in this first experiment. Reuse the owner-only results pattern to let the creator later see completed recipient guesses, merge choices (including None), and predictions. Tell recipients these completed choices are visible to the creator; no notifications or friend graph are required.
 
 ## Recipient flow
 
 1. Open a friend's three-snippet challenge without writing code or creating an account.
-2. Guess the friend's implementation and choose which implementation to merge. Lock these first impressions before displaying the diagnostic input or execution evidence.
-3. Show one snippet and a diagnostic input. Default to the merge choice when an appropriate diagnostic is available; otherwise select a target using a recorded deterministic rule.
+2. Guess the friend's implementation and choose which implementation to merge or **None as written**. Lock these first impressions before displaying the diagnostic input or execution evidence.
+3. Show the target snippet and authored diagnostic assigned by the frozen rule above. Selecting None does not imply endorsement of the fallback target.
 4. Commit an expected outcome and confidence before execution evidence is returned. Do not reveal model identity first.
 5. Explicitly reveal behavior, then authorship and attributed votes. Keep the contract, code, input, expected result, and actual result inspectable.
 6. Present the result and actions: share, write your own, or **Find the counterexample**.
 
 Default flow: **find → choose → predict → reveal**. Counterexample play is optional after the result, never a gate before completion. Prediction explanations should be short and grounded in the actual code and observed behavior.
+
+## Emotional payoff and the all-pass round
+
+| Person | Discovery | Reason to care | Invitation back |
+| --- | --- | --- | --- |
+| Creator | Whether someone recognizes, prefers, and understands their implementation | Someone actually inspected their work; a counterexample offers something concrete to improve | “Show me how you'd write it.” |
+| Recipient | Whether a committed first impression and behavior prediction hold up | Feedback concerns their own judgment, rather than a generic detector score | “Write your version” or the smaller “Try another input” |
+
+All three implementations passing the original suite is a successful complete round. Show the selected input, predicted and actual behavior, a concise trace of the relevant code path, authorship, and merge preferences. Agreement can confirm a good prediction; disagreement about maintainability can remain unresolved. Do not introduce a hidden failure or force counterexample play to manufacture a payoff.
+
+Predictions can be wrong even when an implementation meets the contract; a player can also correctly predict a bug. Report prediction correctness separately from implementation conformance. No inference about human versus AI code quality follows from one case.
+
+Listen for “Wait—let me try something” and voluntary alternative implementations. Role reversal is constructive: recipients can demonstrate a different solution, or submit a smaller counterexample. Same-problem return challenges have prior exposure and are not independent benchmark comparisons.
 
 ## Optional counterexample phase
 
@@ -121,6 +157,10 @@ Measure social participation and learning separately:
 
 - A human writes one actual implementation; two independently generated rivals form a stable challenge.
 - A fresh recipient completes the required flow without writing code.
+- Assistance rules and self-report are visible; provenance does not claim verified unaided authorship. No AI ballots are generated for this prototype.
+- **None as written** completes first impressions, receives a non-endorsed fallback prediction target, and survives refresh as a distinct choice.
+- Authored diagnostic assignment follows the recorded rule independently of pass/fail results, including ordinary successful cases; retries consume no extra ordinal.
+- A round where all implementations pass still provides a full reveal and next actions without requiring an attack.
 - Creator and recipient paths differ appropriately; first impressions lock before diagnostic evidence and prediction locks before behavior/provenance.
 - Reference behavior and adversarial inputs are tested against the explicit problem contract.
 - Executed failures, missing evidence, resource limits, and invalid attack inputs are distinguishable.
@@ -128,7 +168,8 @@ Measure social participation and learning separately:
 - A recipient can inspect a concrete input/output discrepancy and opt into counterexample play after completion.
 - Public execution passes isolation and resource-limit checks; browser code remains displayed text.
 - A small observed prototype test records reading burden, time to payoff, sharing behavior, and prediction comprehension before broader build-out.
+- The creator can revisit completed recipient judgments and predictions without accessing unfinished choices or changing original records.
 
 ## Decisions still open before implementation
 
-Exact runtime/isolation technology; writing time and editor; provider/model lineup; whether initial AI ballots justify their latency; diagnostic selection and option generation; result-card layout; and the developer pilot size. These are prototype design choices, not validated product facts.
+Exact runtime/isolation technology; writing time and editor; provider/model lineup; which paper problem and authored bank to freeze for the first build; result-card layout; and the developer pilot size. The assistance rule, None choice, omission of AI judging, assignment algorithm, and all-pass behavior are settled for this pilot. They remain hypotheses to evaluate, not claims of validated product performance.

@@ -1,6 +1,6 @@
 # Slop Connoisseur: product direction
 
-Updated September 7, 2026. This document records the product decisions agreed in conversation after the repository audit. It describes intended behavior, not shipped functionality.
+Updated September 8, 2026. This document records the product decisions agreed in conversation after the repository audit and subsequent spec review. It describes intended behavior, not shipped functionality.
 
 ## Shared premise
 
@@ -34,6 +34,7 @@ Recognition and preference are independent. Immediately recognizing a friend's e
 - Use accurate language: preference does not establish dislike; passing a test suite does not prove correctness; a detection vote does not measure humanity.
 - Allow camouflage within the task's rules. Do not require deliberately bad writing or broken code to succeed.
 - End with a satisfying result and a next action: share, write a challenge back, or start a new prompt.
+- Complete the exchange for creators: owner-only results show what completed recipients guessed and preferred. Inform recipients of that visibility, distinguish self-reported nicknames from verified identities, and do not require notifications or a friend graph.
 
 The anonymous challenge is a game boundary, not a guarantee that a person cannot learn an answer elsewhere and return. Do not claim cheating-proof identity or globally unique humans from anonymous browser sessions.
 
@@ -45,6 +46,10 @@ Code Tasting adds behavioral consequences. “Looks AI-written,” “would merg
 
 Code Tasting's promise is social code review with behavioral consequences, not a coding benchmark or a general AI detector. Its learning hypothesis is that repeatedly committing predictions and seeing counterexamples can improve code-reading judgment. Validate transfer on fresh problems before claiming broad improvement.
 
+Blind Tasting invites role reversal: **Now make me find you.** Code Tasting invites an alternative: **Show me how you'd write it**, with **Try another input** as a smaller response. Creator return, not just recipient completion, is part of the social hypothesis. The interface states observed facts and leaves room for people to supply the teasing.
+
+For the first Code Tasting pilot, writing is self-reported as unaided by generative AI, merge voting permits **None as written**, and a frozen authored diagnostic bank is assigned independently of pass/fail outcomes. All-pass rounds must be satisfying; optional AI judging is omitted. These decisions are specified in the mode document rather than left to execution-engine implementation.
+
 ## Scope and sequence
 
 1. Deliver the [Blind Tasting spec](./spec-blind-tasting.md) through the existing [blind-challenge milestone](./next-milestone-blind-challenges.md), including public-play fixes and the 20–30-person pilot.
@@ -52,6 +57,8 @@ Code Tasting's promise is social code review with behavioral consequences, not a
 3. Decide later work from results. Find The Machine multiplayer, dedicated audience infrastructure, full accounts, and deeper lineage remain deferred; no fixed order among those later projects is committed here.
 
 Chatdex and Cortex Lattice are outside this product scope.
+
+Before building Code Tasting, compare the [three paper problem sketches](./code-tasting-problem-sketches.md). Choose one after reviewing both a satisfying passing round and a failing round; building a large prompt catalog is not a prerequisite for Blind Tasting.
 
 ## Status of decisions
 

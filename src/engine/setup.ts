@@ -10,7 +10,7 @@ import type { GameStore } from "../store/store.js";
 import { makeEventLogger, type EventLogger } from "./events.js";
 
 /** Idempotently seeds prompts and the persistent human + machine contestants. */
-export function ensureSeeded(store: GameStore, tunables: Tunables, clock: Clock): {
+export function ensureSeeded(store: GameStore, tunables: Tunables, clock: Clock, humanId = "human-player"): {
   human: Contestant;
   machines: Contestant[];
 } {
@@ -25,7 +25,6 @@ export function ensureSeeded(store: GameStore, tunables: Tunables, clock: Clock)
     );
   }
 
-  const humanId = "human-player";
   if (!store.has("contestant", humanId)) {
     store.insert("contestant", {
       id: humanId,

@@ -86,3 +86,13 @@ export const defaultTunables: Tunables = {
 
   promptSelection: "random-unplayed-first",
 };
+
+/** Small-pilot HTTP and model-work limits, override through createGameServer options. */
+export const defaultWebLimits = {
+  maxBodyBytes: 16_384,
+  maxConcurrentModelCalls: 5,
+  maxQueuedModelCalls: 100,
+  maxRoundsPerHour: 30,
+  maxPlayerRoundsPerHour: 5,
+  deadlineGraceMs: 1500,
+};

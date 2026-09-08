@@ -207,6 +207,12 @@ export function castHumanTaste(deps: JudgingDeps, roundId: string, label: string
       `Label ${label} is not an eligible taste candidate (eligible: ${candidates.map((c) => c.label).join(", ")})`,
     );
   }
+  const existing = deps.store.where("judgment", (j) =>
+    j.roundId === roundId && j.judgeContestantId === human.id && j.type === "taste")[0];
+  if (existing) {
+    if (existing.chosenAppearanceId !== chosen.appearance.id) throw new Error("Taste vote is already locked");
+    return existing;
+  }
   return persistJudgment(deps, round, human, "taste", chosen.appearance.id);
 }
 

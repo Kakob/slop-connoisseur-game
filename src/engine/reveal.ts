@@ -17,7 +17,9 @@ export function revealProvenance(deps: JudgingDeps, roundId: string): RoundResul
 /** Completes the round (REVEAL → RESULTS), snapshotting the summary alongside raw records. */
 export function completeRound(deps: JudgingDeps, roundId: string, tunables: Tunables): Round {
   const results = computeResults(deps.store, roundId, tunables);
-  const round = advancePhase(deps.store, roundId, "REVEAL", "RESULTS");
+  const current = deps.store.get("round", roundId);
+  if (current.phase !== "REVEAL") throw new Error(`Cannot complete in phase ${current.phase}`);
+  const round = deps.store.update("round", { ...current, phase: "RESULTS", results });
   deps.events("round_completed", {
     deceptionRate: results.deceptionRate,
     deceptionPoints: results.deceptionPoints,

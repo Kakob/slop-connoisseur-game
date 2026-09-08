@@ -133,6 +133,26 @@ function scenario() {
 const HUMAN = "C";
 
 describe("scoring (§18)", () => {
+  it("distinguishes absent Taste evidence from zero preference and reports partial ballots", () => {
+    const { store, clock, idGen } = scenario();
+    const missing = addRound(store, clock, idGen, { detection: ["A", "A", "A"] });
+    const zero = addRound(store, clock, idGen, { detection: ["A", "A", "A"], machineTaste: ["A", "B"] });
+    const partial = addRound(store, clock, idGen, { detection: ["A", "A", "A"], machineTaste: ["C", "B"] });
+    expect(computeResults(store, missing, defaultTunables)).toMatchObject({ tasteRate: null, machineTasteBallots: [] });
+    expect(computeResults(store, missing, defaultTunables).distinctions).not.toContain("SAFE_SLOP");
+    expect(computeResults(store, zero, defaultTunables).tasteRate).toBe(0);
+    expect(computeResults(store, partial, defaultTunables)).toMatchObject({ tasteRate: 0.5, machineJudgeCount: 3 });
+  });
+
+  it("does not count another player's rounds toward a streak", () => {
+    const { store, clock, idGen } = scenario();
+    const rounds = [0, 1, 2].map(() => addRound(store, clock, idGen, { phase: "RESULTS", detection: ["A", "A", "A"], machineTaste: ["C", "C"] }));
+    store.update("round", { ...store.get("round", rounds[0]!), humanContestantId: "different-player" });
+    const result = computeResults(store, rounds[2]!, defaultTunables);
+    expect(result.distinctions).not.toContain("GHOST_STREAK");
+    expect(result.distinctions).not.toContain("PALATE_STREAK");
+  });
+
   it("matches the SPEC worked example: 2/5 found, 27 words → 60% deception, BOLD ×1.25, 75 points", () => {
     const { store, clock, idGen } = scenario();
     const roundId = addRound(store, clock, idGen, {

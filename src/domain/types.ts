@@ -205,6 +205,11 @@ export type Round = {
   phase: RoundPhase;
   humanContestantId: string;
   machineContestantIds: string[];
+  /** Immutable published results preserve the original scoring configuration. */
+  results?: import("../scoring/scoring.js").RoundResults;
+  failure?: string;
+  sourceChallengeId?: string;
+  startRequestId?: string;
   /** Response-time record (§20). */
   timings: {
     promptShownAt?: string;
@@ -257,4 +262,18 @@ export type GameEvent = {
   at: string;
   /** Event-specific IDs and detail; never the only record of raw outcomes. */
   data: Record<string, unknown>;
+};
+
+/** Opaque browser credential, stored separately from public contestant identities. */
+export type PlayerSession = { id: string; humanId: string; createdAt: string };
+/** A stable replay of one completed round; no regenerated specimens. */
+export type Challenge = { id: string; roundId: string; ownerId: string; createdAt: string };
+/** Locked choices and reveal are immutable records keyed by attempt ID. */
+export type ChallengeAttempt = { id: string; challengeId: string; playerId: string; createdAt: string };
+export type AttemptLock = { id: string; detection: string; taste: string | null; createdAt: string };
+export type AttemptReveal = { id: string; createdAt: string };
+/** Deduplicated sharing events contain identifiers/counts, never answer text. */
+export type SharingEvent = {
+  id: string; type: string; challengeId: string; playerId: string; at: string;
+  attemptId?: string; roundId?: string; count?: number; newestAttemptId?: string;
 };

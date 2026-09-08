@@ -51,7 +51,7 @@ export type RoundResults = {
 
   machineTasteBallots: Ballot[];
   machineTasteVotesForHuman: number;
-  tasteRate: number;
+  tasteRate: number | null;
   humanTasteLabel: string | null;
 
   distinctions: Distinction[];
@@ -91,7 +91,7 @@ function ballotFor(store: GameStore, round: Round, judgment: Judgment): Ballot {
 function coreRates(store: GameStore, round: Round): {
   blank: boolean;
   deceptionRate: number;
-  tasteRate: number;
+  tasteRate: number | null;
   machinesFound: number;
   machineJudgeCount: number;
 } {
@@ -119,7 +119,7 @@ function coreRates(store: GameStore, round: Round): {
       j.judgeContestantId !== round.humanContestantId,
   );
   const votesForHuman = machineTaste.filter((j) => j.chosenAppearanceId === humanAppearance.id).length;
-  const tasteRate = blank || machineTaste.length === 0 ? 0 : votesForHuman / machineTaste.length;
+  const tasteRate = blank ? 0 : machineTaste.length === 0 ? null : votesForHuman / machineTaste.length;
 
   return { blank, deceptionRate, tasteRate, machinesFound, machineJudgeCount };
 }
@@ -127,7 +127,7 @@ function coreRates(store: GameStore, round: Round): {
 /** Derives streak distinctions by recomputing rates for prior completed rounds (§19). */
 function streaks(store: GameStore, round: Round, tunables: Tunables): Distinction[] {
   const history = store
-    .where("round", (r) => r.mode === round.mode && (r.phase === "RESULTS" || r.id === round.id))
+    .where("round", (r) => r.humanContestantId === round.humanContestantId && r.mode === round.mode && (r.phase === "RESULTS" || r.id === round.id))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const upToCurrent = history.slice(0, history.findIndex((r) => r.id === round.id) + 1);
 
@@ -139,7 +139,7 @@ function streaks(store: GameStore, round: Round, tunables: Tunables): Distinctio
   if (rates.every((r) => !r.blank && r.deceptionRate >= tunables.combos.highDeceptionRate)) {
     out.push("GHOST_STREAK");
   }
-  if (rates.every((r) => !r.blank && r.tasteRate >= tunables.combos.meaningfulTasteRate)) {
+  if (rates.every((r) => !r.blank && r.tasteRate !== null && r.tasteRate >= tunables.combos.meaningfulTasteRate)) {
     out.push("PALATE_STREAK");
   }
   return out;
@@ -197,7 +197,7 @@ export function computeResults(store: GameStore, roundId: string, tunables: Tuna
     if (machineJudgeCount > 0 && machinesFound === 0 && wonMachineTaste) distinctions.push("HIDDEN_GEM");
     if (
       deceptionRate >= tunables.combos.highDeceptionRate &&
-      tasteRate <= tunables.combos.lowTasteRate &&
+      tasteRate !== null && tasteRate <= tunables.combos.lowTasteRate &&
       riskTier?.name === "SAFE"
     ) {
       distinctions.push("SAFE_SLOP");
@@ -205,7 +205,7 @@ export function computeResults(store: GameStore, roundId: string, tunables: Tuna
     if (
       riskTier?.name === "DANGEROUS" &&
       deceptionRate >= tunables.combos.highDeceptionRate &&
-      tasteRate >= tunables.combos.meaningfulTasteRate
+      tasteRate !== null && tasteRate >= tunables.combos.meaningfulTasteRate
     ) {
       distinctions.push("DANGEROUS_GOODS");
     }

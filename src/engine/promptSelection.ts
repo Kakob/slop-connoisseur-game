@@ -12,13 +12,13 @@ export function isPromptActive(store: GameStore, prompt: GamePrompt): boolean {
 }
 
 /** Derives the next round's prompt from active prompts, preferring unplayed ones. */
-export function selectPrompt(store: GameStore, rng: Rng, tunables: Tunables): GamePrompt {
+export function selectPrompt(store: GameStore, rng: Rng, tunables: Tunables, humanId?: string): GamePrompt {
   const active = store.where("prompt", (p) => isPromptActive(store, p));
   if (active.length === 0) throw new Error("No active prompts available");
 
   let pool = active;
   if (tunables.promptSelection === "random-unplayed-first") {
-    const playedPromptIds = new Set(store.all("round").map((r) => r.promptId));
+    const playedPromptIds = new Set(store.where("round", (r) => !humanId || r.humanContestantId === humanId).map((r) => r.promptId));
     const unplayed = active.filter((p) => !playedPromptIds.has(p.id));
     if (unplayed.length > 0) pool = unplayed;
   }

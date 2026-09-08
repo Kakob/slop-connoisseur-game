@@ -8,6 +8,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type {
+  PlayerSession, Challenge, ChallengeAttempt, AttemptLock, AttemptReveal, SharingEvent,
   Appearance,
   Contestant,
   FailedJudgment,
@@ -23,6 +24,7 @@ import type {
 } from "../domain/types.js";
 
 export type EntityKind =
+  | "playerSession" | "challenge" | "challengeAttempt" | "attemptLock" | "attemptReveal" | "sharingEvent"
   | "prompt"
   | "promptDerivation"
   | "promptStatus"
@@ -37,6 +39,8 @@ export type EntityKind =
   | "studioRun";
 
 type KindMap = {
+  playerSession: PlayerSession; challenge: Challenge; challengeAttempt: ChallengeAttempt;
+  attemptLock: AttemptLock; attemptReveal: AttemptReveal; sharingEvent: SharingEvent;
   prompt: GamePrompt;
   promptDerivation: PromptDerivation;
   promptStatus: PromptStatus;
@@ -52,6 +56,7 @@ type KindMap = {
 };
 
 const ALL_KINDS: EntityKind[] = [
+  "playerSession", "challenge", "challengeAttempt", "attemptLock", "attemptReveal", "sharingEvent",
   "prompt",
   "promptDerivation",
   "promptStatus",
@@ -123,9 +128,9 @@ export class GameStore {
     if (table.has(record.id)) {
       throw new Error(`Duplicate ${kind} id: ${record.id}`);
     }
-    table.set(record.id, record);
     this.append(kind, record);
-    return record;
+    table.set(record.id, structuredClone(record));
+    return structuredClone(record);
   }
 
   /** Re-writes an existing record; only permitted for mutable kinds (rounds). */
@@ -137,16 +142,16 @@ export class GameStore {
     if (!table.has(record.id)) {
       throw new Error(`Cannot update missing ${kind} id: ${record.id}`);
     }
-    table.set(record.id, record);
     this.append(kind, record);
-    return record;
+    table.set(record.id, structuredClone(record));
+    return structuredClone(record);
   }
 
   /** Fetches one record, failing loudly when absent. */
   get<K extends EntityKind>(kind: K, id: string): KindMap[K] {
     const record = this.table(kind).get(id);
     if (!record) throw new Error(`Missing ${kind} id: ${id}`);
-    return record as KindMap[K];
+    return structuredClone(record) as KindMap[K];
   }
 
   /** Returns whether a record exists. */
@@ -156,7 +161,7 @@ export class GameStore {
 
   /** Returns all records of a kind in insertion order. */
   all<K extends EntityKind>(kind: K): KindMap[K][] {
-    return [...this.table(kind).values()] as KindMap[K][];
+    return structuredClone([...this.table(kind).values()]) as KindMap[K][];
   }
 
   /** Returns all records of a kind matching a predicate. */

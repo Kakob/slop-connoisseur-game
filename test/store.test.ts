@@ -31,6 +31,18 @@ afterEach(() => {
 });
 
 describe("GameStore", () => {
+  it("protects stored values from mutation through every read and insert reference", () => {
+    const store = GameStore.open();
+    const source = specimen("s1");
+    const inserted = store.insert("specimen", source);
+    source.text = "input changed";
+    inserted.text = "return changed";
+    store.get("specimen", "s1").text = "get changed";
+    store.all("specimen")[0]!.text = "all changed";
+    store.where("specimen", row => { row.text = "predicate changed"; return true; });
+    expect(store.get("specimen", "s1").text).toBe("hello");
+  });
+
   it("rejects duplicate ids", () => {
     const store = GameStore.open();
     store.insert("specimen", specimen("s1"));

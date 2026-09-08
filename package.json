@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "play": "tsx src/web/main.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "report:sharing": "tsx src/lab/sharingReportCli.ts"
   }
 }

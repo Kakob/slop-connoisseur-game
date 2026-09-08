@@ -25,7 +25,7 @@ const env: GameEnv = {
   rng: systemRng(),
 };
 
-createGameServer(env).listen(port, () => {
+createGameServer(env, { developerTools: process.argv.includes("--dev-tools") }).listen(port, "127.0.0.1", () => {
   console.log(`SLOP CONNOISSEUR — Hide From Machines`);
   console.log(`  play:  http://localhost:${port}/`);
   console.log(mock ? `  provider: offline demo (--mock)` : `  provider: ${providerName} (${tunables.provider.model})`);

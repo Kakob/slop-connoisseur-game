@@ -4,6 +4,9 @@
  * methods is contestant-facing: labels and texts only, never provenance (§33).
  */
 
+import { defaultWebLimits } from "../config/tunables.js";
+import { makeEventLogger } from "../engine/events.js";
+import { computeResults } from "../scoring/scoring.js";
 import type { Tunables, RiskTier } from "../config/tunables.js";
 import type { Clock, IdGen, Rng } from "../domain/runtime.js";
 import type { Specimen } from "../domain/types.js";
@@ -32,12 +35,15 @@ export type GameEnv = {
   tunables: Tunables;
   provider: ModelProvider;
   rng: Rng;
+  deadlineGraceMs?: number;
 };
 
 export type StartedRound = {
   roundId: string;
   promptText: string;
   seconds: number;
+  deadline: number;
+  serverNow: number;
   maxWords: number;
   riskTiers: RiskTier[];
 };
@@ -55,6 +61,8 @@ type ActiveRound = {
   machinePromise: Promise<Specimen[]>;
   judgingPromise?: Promise<MachineJudgingResult>;
   humanContestantId: string;
+  submission?: { text: string; promise: Promise<SubmitResult> };
+  completion?: { label: string; promise: Promise<RoundResults> };
 };
 
 export class GameSession {
@@ -63,22 +71,28 @@ export class GameSession {
   constructor(private readonly env: GameEnv) {}
 
   /** Starts a round: reveals the prompt and kicks machine generation immediately (§5). */
-  startRound(): StartedRound {
+  startRound(humanId = "human-player", sourceChallengeId?: string, startRequestId?: string): StartedRound {
     const { store, clock, idGen, tunables, provider, rng } = this.env;
-    const { human, machines } = ensureSeeded(store, tunables, clock);
-    const prompt = selectPrompt(store, rng, tunables);
+    const { human, machines } = ensureSeeded(store, tunables, clock, humanId);
+    const prompt = selectPrompt(store, rng, tunables, humanId);
     const { round, events } = createRound(store, prompt.id, human, machines, clock, idGen);
     const deps: MachineDeps = { store, clock, idGen, tunables, events, provider };
 
+    store.update("round", { ...round, ...(sourceChallengeId ? { sourceChallengeId } : {}), ...(startRequestId ? { startRequestId } : {}) });
     revealPrompt(deps, round.id);
     const machinePromise = generateMachineSpecimens(deps, store.get("round", round.id));
-    machinePromise.catch(() => {}); // observed in submit(); avoid unhandled rejection
+    machinePromise.catch(() => {
+      const current = store.get("round", round.id);
+      store.update("round", { ...current, failure: "Machine writing failed. Start a fresh round." });
+    }); // observed in submit(); avoid unhandled rejection
 
     this.active.set(round.id, { deps, machinePromise, humanContestantId: human.id });
     return {
       roundId: round.id,
       promptText: prompt.text,
       seconds: tunables.humanWritingSeconds,
+      deadline: Date.parse(store.get("round", round.id).timings.promptShownAt!) + tunables.humanWritingSeconds * 1000,
+      serverNow: clock(),
       maxWords: tunables.maxResponseWords,
       riskTiers: tunables.riskTiers,
     };
@@ -94,9 +108,33 @@ export class GameSession {
    * machine table, and returns the human's taste candidates.
    */
   async submit(roundId: string, text: string | null): Promise<SubmitResult> {
+    const input = text?.trim() ?? "";
+    const active = this.round(roundId);
+    if (active.submission) {
+      if (active.submission.text !== input) throw new Error("Submission is already locked");
+      return active.submission.promise;
+    }
+    const round = this.env.store.get("round", roundId);
+    if (round.phase !== "WRITING") {
+      const specimen = this.env.store.where("appearance", a => a.roundId === roundId)
+        .map(a => this.env.store.get("specimen", a.specimenId)).find(s => s.creatorContestantId === round.humanContestantId);
+      if (!specimen || (specimen.isBlank ? input !== "" : specimen.text !== input)) throw new Error("Submission is already locked");
+      return this.candidates(roundId);
+    }
+    const promise = this.submitOnce(roundId, text);
+    active.submission = { text: input, promise };
+    promise.catch(() => {
+      if (this.env.store.get("round", roundId).phase === "WRITING") delete active.submission;
+    });
+    return promise;
+  }
+
+  private async submitOnce(roundId: string, text: string | null): Promise<SubmitResult> {
     const activeRound = this.round(roundId);
     const { deps } = activeRound;
-    const trimmed = text?.trim() ?? "";
+    const current = deps.store.get("round", roundId);
+    const deadline = Date.parse(current.timings.promptShownAt!) + deps.tunables.humanWritingSeconds * 1000;
+    const trimmed = deps.clock() > deadline + (this.env.deadlineGraceMs ?? defaultWebLimits.deadlineGraceMs) ? "" : text?.trim() ?? "";
     const humanSpecimen =
       trimmed.length === 0 ? timeoutBlank(deps, roundId) : submitHuman(deps, roundId, trimmed);
 
@@ -122,9 +160,29 @@ export class GameSession {
    * and completes the round, returning full post-reveal results.
    */
   async castTaste(roundId: string, label: string): Promise<RoundResults> {
+    label = label.trim().toUpperCase();
+    const round = this.env.store.get("round", roundId);
+    if (round.phase === "RESULTS") {
+      const results = round.results ?? computeResults(this.env.store, roundId, this.env.tunables);
+      if (results.humanTasteLabel !== label) throw new Error("Taste vote is already locked");
+      return results;
+    }
+    const active = this.round(roundId);
+    if (active.completion) {
+      if (active.completion.label !== label) throw new Error("Taste vote is already locked");
+      return active.completion.promise;
+    }
+    const promise = this.completeOnce(roundId, label);
+    active.completion = { label, promise };
+    promise.catch(() => { delete active.completion; });
+    return promise;
+  }
+
+  private async completeOnce(roundId: string, label: string): Promise<RoundResults> {
     const activeRound = this.round(roundId);
     const { deps } = activeRound;
     castHumanTaste(deps, roundId, label);
+    if (!activeRound.judgingPromise) activeRound.judgingPromise = runMachineJudging(deps, roundId);
     await activeRound.judgingPromise;
 
     for (let attempt = 1; ; attempt++) {
@@ -147,7 +205,43 @@ export class GameSession {
     return results;
   }
 
+  /** Returns only the creator-facing state appropriate to the current phase. */
+  read(roundId: string) {
+    const round = this.env.store.get("round", roundId);
+    const base = {
+      roundId, promptText: this.env.store.get("prompt", round.promptId).text,
+      phase: round.phase, maxWords: this.env.tunables.maxResponseWords,
+      riskTiers: this.env.tunables.riskTiers, serverNow: this.env.clock(),
+      deadline: Date.parse(round.timings.promptShownAt!) + this.env.tunables.humanWritingSeconds * 1000,
+    };
+    if (round.phase === "RESULTS") return { ...base, results: round.results ?? computeResults(this.env.store, roundId, this.env.tunables) };
+    if (round.failure) return { ...base, failure: round.failure };
+    if (!this.active.has(roundId) && round.phase !== "JUDGING") {
+      return { ...base, failure: "This round was interrupted by a server restart. Start a fresh round." };
+    }
+    if (round.phase === "JUDGING") {
+      const vote = this.env.store.where("judgment", j => j.roundId === roundId && j.judgeContestantId === round.humanContestantId && j.type === "taste")[0];
+      return { ...base, ...this.candidates(roundId), selectedTaste: vote ? this.candidates(roundId).candidates.find(c =>
+        this.env.store.get("appearance", vote.chosenAppearanceId).anonymousPosition === c.label.charCodeAt(0) - 65)?.label : null };
+    }
+    return base;
+  }
+
+  private candidates(roundId: string): SubmitResult {
+    const active = this.round(roundId);
+    const specimen = this.env.store.where("appearance", a => a.roundId === roundId)
+      .map(a => this.env.store.get("specimen", a.specimenId)).find(s => s.creatorContestantId === active.humanContestantId)!;
+    return { blank: specimen.isBlank, candidates: tasteCandidatesFor(active.deps, roundId, active.humanContestantId).map(c => ({ label: c.label, text: c.text })) };
+  }
+
   private round(roundId: string): ActiveRound {
+    if (!this.active.has(roundId)) {
+      const round = this.env.store.get("round", roundId);
+      if (round.phase === "JUDGING" && !round.failure) {
+        const deps = { ...this.env, events: makeEventLogger(this.env.store, roundId, this.env.clock, this.env.idGen) };
+        this.active.set(roundId, { deps, humanContestantId: round.humanContestantId, machinePromise: Promise.resolve([]) });
+      }
+    }
     const activeRound = this.active.get(roundId);
     if (!activeRound) throw new Error(`No active round ${roundId}`);
     return activeRound;

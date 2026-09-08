@@ -15,7 +15,11 @@ The first playable mode is **Hide From Machines**:
 - contestants also vote on which response they most wish they had written;
 - the reveal scores both **deception** and **taste**.
 
-The next mode is **Find The Machine**, which reverses the game for multiplayer play.
+The next milestone is **blind challenge sharing**: complete a Hide From Machines round, send its anonymous lineup to a friend, and let them guess before revealing. See the [accepted milestone plan](./docs/next-milestone-blind-challenges.md) and [repository audit](./docs/repo-audit-2026-09-07.md).
+
+The agreed public name for the ordinary-prompt experience is **Blind Tasting**. **Code Tasting** is a separately specified follow-on experiment where people contribute code, judge it, predict behavior, and inspect execution. These new experiences are documented, not yet implemented. See the [product and mode specs](./docs/README.md).
+
+**Find The Machine**, which reverses the game for multiplayer play, remains deferred.
 
 The immediate goal is not production polish. It is to determine whether repeated rounds create interesting strategy, surprising reveals, and a desire to play again.
 
@@ -27,6 +31,8 @@ Before making implementation decisions, read:
 2. [`SPEC-prototype.md`](./SPEC-prototype.md)
 
 These documents define the current product direction and prototype requirements.
+
+For subsequent agreed naming, friend-challenge behavior, and new mode scope, also read [the product direction](./docs/product-direction.md), then the relevant mode spec and milestone plan in [docs](./docs/README.md).
 
 ## Important: archived work
 

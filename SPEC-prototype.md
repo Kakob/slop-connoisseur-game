@@ -7,6 +7,23 @@
 
 ---
 
+> ## Implementation status (annotated 2026-08-28)
+>
+> Status markers were added to this document at the author's request; the spec text itself is unchanged. Legend: ✅ done · 🟡 partial · ⬜ not started · ➖ architecture-only by design (spec asks for support, not behavior).
+>
+> | Milestone | Status | Evidence |
+> |---|---|---|
+> | M0.0 Foundation | ✅ | commit `8a6e6d3`; `src/domain`, `src/config`, `src/store`, `test/boundaries.test.ts` |
+> | M0.1 Human writing loop | ✅ | commit `0507e5d`; `src/engine/writing.ts` |
+> | M0.2 Machine table | ✅ | commit `74699f9`; `src/engine/machines.ts` |
+> | M0.3 Independent judging | ✅ | commit `c2e6a2b`; `src/engine/judging.ts` |
+> | M0.4 Reveal and scoring | ✅ | commit `9930ba8`; `src/scoring/`, `src/engine/reveal.ts`, `src/web/public/app.js` |
+> | M0.5 Slop Lab | 🟡 | commit `598859d`; `/lab` covers everything in §28 except lineage/derivation views ("provenance graph basics") |
+> | M0.6 Playtest pass | ⬜ | no play data, no tunable revisions; `DECISIONS.md` ⚠-items await this |
+> | M1 Find The Machine | ⬜ | only the `RoundMode` union and `human-detection` judgment type exist; no rooms, no human detection flow, no decoy scoring, no §31 distinctions |
+>
+> Also built, outside §36: subscription-billed `ClaudeAgentProvider` and the `/studio` prompt-curation surface (see `DECISIONS.md` §11). Test suite: 96 passing, 2 env-gated smoke tests skipped.
+
 # 1. Product thesis
 
 Slop Connoisseur is a game about the increasingly blurry boundary between human and machine writing.
@@ -352,6 +369,8 @@ Machine contestants should have persistent **personas** while remaining free to 
 
 ## Persona
 
+> **Status:** 🟡 Five personas seeded (`src/contestants/personas.ts`) with the full `tendencies` shape, but the numeric tendencies are stored only — not injected into writer/judge prompts. Only `voice` and `tastePreferences` reach the model (DECISIONS D41).
+
 A persona represents relatively persistent tendencies.
 
 Example conceptual fields:
@@ -454,6 +473,8 @@ The contestant should choose tactics based on its persona, prompt, strategy, and
 ---
 
 # 9. Persistent machine history
+
+> **Status:** 🟡 Own past responses (last 5, appearance-backed) are injected into writer context; `persistentFacts` is plumbed but empty; no deception/taste-performance history yet (DECISIONS D42, D53). Scoping rule is enforced structurally.
 
 Architecture should allow personas to accumulate history.
 
@@ -558,6 +579,8 @@ These hypotheses are analysis metadata, not player-facing categories.
 
 # 11. Prompt lineage
 
+> **Status:** ✅ `PromptDerivation` records exist and are created by `/studio` prompt edits (`operation: "edit"`). No automatic prompt evolution, as specified.
+
 Generated or modified prompts should not overwrite ancestors.
 
 Example:
@@ -624,6 +647,8 @@ If a specimen is transformed, create a descendant.
 ---
 
 # 13. Derivations and lineage
+
+> **Status:** ➖ `SpecimenDerivation` entity and store kind exist; no code path creates one yet (spec requires only data-model support in M0).
 
 A derivation describes how one specimen produced another.
 
@@ -963,6 +988,8 @@ Combo detection should derive from stored events/outcomes rather than destructiv
 
 # 20. Response time
 
+> **Status:** ✅ All four timings recorded. Timer experimentation (30/45/60 s) is possible only by editing `humanWritingSeconds` in `src/config/tunables.ts` — there is no CLI flag. Note the timer is client-enforced (DECISIONS D36); server enforcement is an M1 requirement.
+
 Record:
 
 ```text
@@ -1137,6 +1164,8 @@ Taste exists partly to discourage degenerate strategies such as maximally generi
 
 # 25. Content reuse
 
+> **Status:** ➖ `reuseAllowed` is stored on every specimen (always `true` today, including blanks). No reuse/re-appearance flow exists; Blank-Specimen reuse exclusion is not yet enforced anywhere because nothing reuses specimens.
+
 Responses may become future game content only when:
 
 ```text
@@ -1158,6 +1187,8 @@ Blank Specimens should not be eligible for content reuse unless a future explici
 ---
 
 # 26. Prompt performance
+
+> **Status:** ➖ Raw records are sufficient to compute all listed statistics; nothing computes them yet (spec defers this).
 
 Architecture should permit future prompt statistics such as:
 
@@ -1233,6 +1264,8 @@ At timeout:
 ---
 
 # 28. Debug / Slop Lab surface
+
+> **Status:** 🟡 Everything in the list below is exposed at `/lab` (`src/lab/report.ts`). Missing: any lineage view — `promptDerivation` / `specimenDerivation` / `parentPromptId` are not rendered, so the M0.5 "provenance graph basics" item is unmet.
 
 Provide a developer-only/debug surface.
 
@@ -1412,6 +1445,8 @@ Button:
 
 # 30. M1 architecture — Find The Machine
 
+> **Status:** ⬜ Not started. No rooms, join links, multi-human sessions, or server-enforced timer. Prerequisite: M0.6 playtest ("after M0 is playable and stable").
+
 After M0 is playable and stable, implement M1 over the same primitives.
 
 M1 requires real human participants.
@@ -1457,6 +1492,8 @@ Do not require accounts for prototype multiplayer unless technically necessary.
 ---
 
 # 31. Find The Machine scoring
+
+> **Status:** ⬜ Not started. No machine-deception-vs-humans scoring, `detectionSuccess`, decoy credit, or any of the four distinctions below.
 
 Machine:
 
@@ -1633,6 +1670,8 @@ For M1, add only the multiplayer functionality necessary to test Find The Machin
 
 ## M0.0 — Foundation
 
+> **Status:** ✅ Done — commit `8a6e6d3`. Boundary acceptance is tested with sentinel provenance values (`test/boundaries.test.ts`).
+
 Implement:
 
 * core data model;
@@ -1651,6 +1690,8 @@ Hidden provenance can be stored server-side while contestant/judge payloads cont
 ---
 
 ## M0.1 — Human writing loop
+
+> **Status:** ✅ Done — commit `0507e5d`. Note: an empty *early* submit is rejected; only the timer produces a Blank Specimen (DECISIONS D14).
 
 Implement:
 
@@ -1671,6 +1712,8 @@ A human can complete the writing phase and always produce an immutable round art
 
 ## M0.2 — Machine table
 
+> **Status:** ✅ Done — commit `74699f9`. Five concurrent generations, retries, exact-duplicate retry, server-side shuffle.
+
 Implement:
 
 * five independent machine contestants;
@@ -1686,6 +1729,8 @@ A completed table contains exactly one human-origin Appearance and five independ
 ---
 
 ## M0.3 — Independent judging
+
+> **Status:** ✅ Done — commit `c2e6a2b`. Ten independent judge calls per round; human taste vote; `minJudgeCount` quorum (default 3) protects detection only.
 
 Implement:
 
@@ -1704,6 +1749,8 @@ No judging request contains hidden provenance, and each machine produces its own
 ---
 
 ## M0.4 — Reveal and scoring
+
+> **Status:** ✅ Done — commit `9930ba8`. All six §19 distinctions implemented; thresholds in tunables are untested guesses (DECISIONS D28–D29).
 
 Implement:
 
@@ -1724,6 +1771,8 @@ Developer can inspect how every displayed result derives from stored raw judgmen
 
 ## M0.5 — Slop Lab
 
+> **Status:** 🟡 Mostly done — commit `598859d`. Missing: "provenance graph basics" (no lineage/derivation rendering; see §28 note).
+
 Implement:
 
 * debug surface;
@@ -1742,6 +1791,8 @@ A developer can diagnose a suspicious or surprising round without querying the d
 
 ## M0.6 — Playtest pass
 
+> **Status:** ⬜ Not started. No `data/` directory exists on this machine and no tunables have been revised from their initial guesses. This is the gate before M1 and before answering §37.
+
 Play enough rounds to evaluate:
 
 * timer;
@@ -1758,6 +1809,8 @@ Change tunables before expanding scope.
 ---
 
 ## M1 — Find The Machine
+
+> **Status:** ⬜ Not started. Existing hooks: `RoundMode` includes `"find-the-machine"`, `JudgmentType` includes `"human-detection"`, and the store/scoring are mode-agnostic in shape. Every bullet below is unimplemented.
 
 Implement:
 
@@ -1777,6 +1830,8 @@ Reuse M0 primitives.
 ---
 
 # 37. Definition of prototype success
+
+> **Status:** ⬜ Cannot be assessed until M0.6 produces play data.
 
 Do not judge success primarily by visual polish or feature count.
 

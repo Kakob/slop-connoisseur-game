@@ -6,6 +6,7 @@
 - [Three Code Tasting problem sketches](./code-tasting-problem-sketches.md): deduplication, preference merging, and a mutation bug fix, with paper predictions and reveals to compare before choosing the first build.
 - [Repository audit — September 7, 2026](./repo-audit-2026-09-07.md): implementation status, verification evidence, product gaps, and issues to resolve before public play.
 - [Next milestone: blind challenges](./next-milestone-blind-challenges.md): accepted scope, implementation sequence, acceptance criteria, and the first distribution experiment.
+- [Table play](./spec-table-play.md): presentation direction (Nov 3, 2026) that plays the whole round at a dinner table with a watchable reveal; see Q1 in `QUESTIONS.md` for the SPEC §3 scope question.
 
 The user accepted the audit recommendations and subsequent mode naming/product direction on September 7, 2026. The next milestone is **Blind Tasting**, extending Hide From Machines with shareable friend challenges. **Code Tasting** is a separate proposed follow-on prototype. Multiplayer remains deferred.
 

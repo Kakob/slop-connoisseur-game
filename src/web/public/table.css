@@ -1,0 +1,123 @@
+/* Table play (docs/spec-table-play.md): the dinner table is the board. */
+.scene { margin: 22px 0 10px; }
+
+/* Seats: five masked guests and the human's chair, around the far side of the table. */
+.seats { display: flex; justify-content: space-between; gap: 4px; padding: 0 4%; position: relative; z-index: 2; margin-bottom: 8px; }
+.seat { --coat: #5a3550; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; position: relative; }
+.guest { width: min(66px, 100%); transform-origin: 50% 100%; animation: guest-idle 5s ease-in-out infinite; }
+.guest-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.guest-svg .coat { fill: var(--coat); transition: fill .4s; }
+.guest-svg .face { fill: #e9d3bd; }
+.guest-svg .hair { fill: #3b1a30; }
+.guest-svg .mask path { fill: #c9c1cc; stroke: #8d7d92; stroke-width: 1; }
+.guest-svg .mask .eye { fill: #281020; }
+.guest-svg .mask { transform-box: fill-box; transform-origin: 50% 50%; transition: transform .55s cubic-bezier(.3, 1.5, .5, 1); }
+.seat.unmasked .mask { transform: translateY(-62%) rotate(-16deg) scale(.78); }
+.seat.human { --coat: #d1df64; }
+.seat.human .mask path { fill: #d1df64; stroke: #8a9a2c; }
+.seat.spotlight .guest { filter: drop-shadow(0 0 10px #d1df64); }
+.nameplate { margin-top: 4px; min-height: 2.5em; font-size: 10px; line-height: 1.25; text-align: center; color: #d9c2c4; overflow-wrap: anywhere; position: relative; z-index: 3; }
+.seat.unmasked .nameplate { color: var(--coat); font-weight: 650; }
+.seat.found .nameplate::after, .seat.fooled .nameplate::after, .seat.abstain .nameplate::after { display: block; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+.seat.found .nameplate::after { content: "spotted it"; color: #7fd1a8; }
+.seat.fooled .nameplate::after { content: "fooled"; color: #f08a6c; }
+.seat.abstain .nameplate::after { content: "no guess"; color: #bc9ca9; }
+.seat.fooled .guest { transform: rotate(-7deg); animation: none; }
+.seat.lean .guest { animation: lean .6s ease; }
+.bubble { position: absolute; top: 0; left: 50%; translate: -50% -85%; z-index: 4; padding: 2px 8px; border-radius: 10px; background: #f7efdf; color: #281020; font: 800 12px/1.4 system-ui, sans-serif; white-space: nowrap; opacity: 0; pointer-events: none; }
+.bubble:empty { display: none; }
+.bubble.pop { animation: bubble-pop 1.7s ease forwards; }
+
+/* The table and its plates. Plates sit in label order in the middle — never in front of a seat. */
+.tablecloth { position: relative; z-index: 1; padding: 34px 16px 20px; border-radius: 38px; background: radial-gradient(ellipse at 50% 25%, #fbf3e3, #e5d2b4); box-shadow: inset 0 0 0 5px #c96f5c, inset 0 0 0 7px #f0e4cf, 0 14px 0 #180c14aa; }
+.plates { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.empty-cloth { grid-column: 1 / -1; margin: 22px 0; text-align: center; font: italic 17px Georgia, serif; color: #67513c; }
+.plate { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; margin: 0; padding: 4px 2px 6px; min-height: 0; border: 0; border-radius: 14px; background: transparent; color: #332630; font-weight: 650; }
+.plate:hover { background: #ffffff70; transform: translateY(-3px); }
+.plate[aria-pressed="true"] { background: #ffffff8c; box-shadow: 0 0 0 2px #326448; }
+.plate:focus-visible { outline-offset: 0; }
+.cloche { display: block; width: 100%; max-width: 96px; }
+.cloche-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.cloche-svg .dish { fill: #fffdf6; stroke: #b9aab0; stroke-width: 1.2; transition: fill .4s; }
+.cloche-svg .lid path:first-child { fill: #cdc7d1; stroke: #8d7d92; stroke-width: 1.2; }
+.cloche-svg .shine { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; opacity: .85; }
+.cloche-svg .knob { fill: #8d7d92; }
+.cloche-svg .lid { transform-box: view-box; transform-origin: 88% 82%; transition: transform .45s cubic-bezier(.3, 1.5, .5, 1); }
+.plate.open .lid { transform: translate(6px, -10px) rotate(22deg); }
+.plate.human .lid { transform: translate(0, -34px) rotate(-6deg); }
+.plate.human .dish { fill: #d1df64; }
+.plate.own { cursor: default; opacity: .8; }
+.plate.own:hover { background: transparent; transform: none; }
+.plate.own .dish { fill: #d1df64; }
+.plate-label { font: 700 13px/1 system-ui, sans-serif; letter-spacing: .12em; }
+.plate-badge { min-height: 1.3em; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #8a3d2e; }
+.picks, .forks { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; min-height: 22px; }
+.picks { margin-bottom: 4px; }
+.scene[data-phase="serving"] .plate { animation: serve .45s calc(var(--i) * 160ms) cubic-bezier(.3, 1.4, .5, 1) backwards; }
+.scene[data-phase="cooking"] .guest, .scene[data-phase="judging"] .guest { animation: cook 1.3s ease-in-out infinite; }
+.scene[data-phase="ready"] .seat:not(.human) .guest { animation: whisper 2.4s ease-in-out infinite; }
+
+/* Tokens: suspicion picks (a flag on a stick) and favorite forks. */
+.token { display: inline-grid; place-items: center; min-width: 22px; height: 18px; padding: 0 4px; position: relative; border-radius: 3px 10px 10px 3px; background: var(--c); color: #281020; font: 800 9px/1 system-ui, sans-serif; letter-spacing: .02em; box-shadow: 0 2px 0 #0005; }
+.token.pick::after { content: ""; position: absolute; left: 3px; top: 100%; width: 2px; height: 6px; background: #6b5a4a; }
+.token.fork { min-width: 12px; width: 12px; height: 22px; padding: 0; background: none; box-shadow: none; color: var(--c); }
+.token.fork svg { width: 11px; height: 22px; overflow: visible; }
+.token.fork svg path { stroke: #281020; stroke-width: .8; }
+.token.pending { visibility: hidden; }
+.token.land { animation: land .3s ease; }
+.token.hit { box-shadow: 0 0 0 2px #281020, 0 2px 0 #0005; }
+.token.miss { opacity: .5; filter: grayscale(.85); transform: rotate(-24deg); }
+.flying { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -50%); }
+
+/* The fooled meter and the running caption. */
+.meter { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 20px auto 0; }
+.meter i { width: 26px; height: 12px; border-radius: 6px; background: #42263a; border: 1px solid #785765; transition: background .3s, transform .3s; }
+.meter i.on { background: #f08a6c; border-color: #f08a6c; transform: scaleY(1.35); }
+.meter-label, .meter-count { font: 700 11px system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #f0b391; }
+.meter-label { margin-right: 4px; }
+.meter-count { margin-left: 6px; font-variant-numeric: tabular-nums; }
+.caption { min-height: 1.6em; margin: 14px 0 0; text-align: center; font: italic 19px/1.4 Georgia, serif; color: #f2e8d5; }
+.scene.you-found .caption { color: #7fd1a8; }
+
+/* The viewer's hand (recipients) and the reading panel. */
+.hand { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 22px; margin-top: 16px; font-size: 13px; color: #d9c2c4; }
+.hand-hint { flex-basis: 100%; text-align: center; font-size: 12px; color: #bc9ca9; }
+.hand-item { display: inline-flex; align-items: center; gap: 10px; }
+.draggable { cursor: grab; touch-action: none; transform: scale(1.45); }
+.dragging { transform: translate(-50%, -50%) scale(1.45); }
+.reading { margin-top: 16px; padding: 18px 22px; border-radius: 4px; background: #f7efdf; color: #332630; box-shadow: 0 4px 0 #180c1466; overflow-wrap: anywhere; animation: slide-up .3s ease; }
+.reading-label { margin: 0; font: 700 12px/1.4 system-ui, sans-serif; letter-spacing: .12em; color: #67513c; }
+.reading-text { white-space: pre-wrap; font-size: 18px; }
+.reading-actions button.secondary { color: #281020; border-color: #281020; }
+.read-all { margin: 18px 0; }
+.read-all summary { cursor: pointer; font-size: 14px; color: #d9c2c4; }
+
+/* Burst when the human's lid comes off. */
+.burst { position: absolute; left: 50%; top: 45%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; pointer-events: none; background: #d1df64; box-shadow: -34px -22px #f08a6c, 30px -26px #d1df64, -44px 4px #8fc7d9, 42px 2px #f08a6c, -22px -40px #e8b84a, 20px -42px #c7a0e0, 0 -48px #f08a6c, -30px 22px #d1df64, 32px 20px #e8b84a; animation: burst 1.3s ease-out forwards; }
+
+/* Writing: an order ticket and a candle-ring countdown. */
+.ticket { padding: 18px 22px; border-radius: 3px; background: #f7efdf; color: #332630; box-shadow: 0 4px 0 #180c1466; border-top: 6px dashed #c96f5c; }
+.countdown.candle { display: inline-grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; font-size: 22px; background: radial-gradient(closest-side, #281020 80%, transparent 82%), conic-gradient(#d1df64 calc(var(--p, 1) * 360deg), #42263a 0); }
+.countdown.candle.low { color: #f08a6c; background: radial-gradient(closest-side, #281020 80%, transparent 82%), conic-gradient(#f08a6c calc(var(--p, 1) * 360deg), #42263a 0); }
+
+.dinner-heading { margin-bottom: 6px; }
+.dinner-controls { display: flex; justify-content: center; gap: 10px; }
+#screen-waiting .host-art { width: min(150px, 40vw); margin-bottom: 8px; }
+
+@keyframes guest-idle { 50% { transform: translateY(-2px) rotate(1deg); } }
+@keyframes cook { 50% { transform: translateY(-5px) rotate(-4deg); } }
+@keyframes whisper { 50% { transform: rotate(5deg); } }
+@keyframes lean { 40% { transform: translateY(10px) scale(1.08); } }
+@keyframes bubble-pop { 0% { opacity: 0; scale: .6; } 14% { opacity: 1; scale: 1.12; } 24% { scale: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes land { from { transform: translateY(-8px) scale(1.35); } }
+@keyframes burst { from { opacity: 1; transform: scale(.2); } 60% { opacity: 1; } to { opacity: 0; transform: scale(1.3) translateY(-8px); } }
+@keyframes serve { from { opacity: 0; transform: translateY(-26px) scale(.8); } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(8px); } }
+
+@media (max-width: 620px) {
+  .plates { grid-template-columns: repeat(3, 1fr); row-gap: 4px; }
+  .tablecloth { padding: 30px 10px 14px; border-radius: 28px; }
+  .seats { padding: 0; }
+  .caption { font-size: 16px; }
+  .meter i { width: 20px; }
+}

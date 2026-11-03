@@ -15,7 +15,7 @@ export const YOU = '@you';
 export const FRIEND = '@friend';
 
 const COLORS = ['#f08a6c', '#8fc7d9', '#e8b84a', '#c7a0e0', '#7fd1a8', '#f2a5c0', '#b9c6f0'];
-const IVORY = '#f7efdf';
+const PLAYER = '#d1df64';
 
 /** Derives pre-reveal plates from candidates, copying only label and text. */
 export function tableModel(candidates, { ownLabel = null, ownText = '' } = {}) {
@@ -125,9 +125,9 @@ function h(tag, className, text) {
   return el;
 }
 function infoFor(root, who) {
-  if (who === YOU) return { name: 'You', initials: 'YOU', color: IVORY };
-  if (who === FRIEND) return { name: 'Your friend', initials: '★', color: IVORY };
-  return guestInfo.get(root)?.get(who) ?? { name: who, initials: initialsOf(who), color: IVORY };
+  if (who === YOU) return { name: 'You', initials: 'YOU', color: PLAYER };
+  if (who === FRIEND) return { name: 'Your friend', initials: '★', color: PLAYER };
+  return guestInfo.get(root)?.get(who) ?? { name: who, initials: initialsOf(who), color: PLAYER };
 }
 function plateEl(root, label) { return root.querySelector(`.plate[data-label="${CSS.escape(label)}"]`); }
 function seatEl(root, who) {

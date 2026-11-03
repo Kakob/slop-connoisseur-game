@@ -6,6 +6,7 @@
   <meta name="description" content="Your friend wrote one. They're hoping you pick wrong. Taste the answers, make your guess, and reveal." />
   <title>Blind Tasting · Slop Connoisseur</title>
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/table.css" />
 </head>
 <body data-screen="start">
   <header><a href="/">SLOP <span class="brand-serif">Connoisseur</span></a><span class="mode-label">THE BLIND TASTING CLUB</span></header>
@@ -30,9 +31,9 @@
       <div id="my-rounds"></div>
     </section>
     <section id="screen-writing" hidden>
-      <p class="eyebrow">YOUR ANSWER</p>
-      <h1 id="writing-prompt" class="prompt"></h1>
-      <p id="countdown" class="countdown" role="timer"></p>
+      <p class="eyebrow">TONIGHT’S ORDER</p>
+      <div class="ticket"><h1 id="writing-prompt" class="prompt"></h1></div>
+      <p id="countdown" class="countdown candle" role="timer"></p>
       <label for="response">Blend in. Your friends will be looking.</label>
       <textarea id="response" rows="5" autocomplete="off" spellcheck="false" maxlength="10000"></textarea>
       <p id="word-status" class="status"></p>
@@ -43,13 +44,15 @@
       <img class="host-art" src="/assets/cloche-host-v1.png" alt="The cloche-headed maître d’ raises a tasting spoon." width="1024" height="1024" />
       <p class="eyebrow">YOUR MAÎTRE D’ IS ON IT</p><h1>Setting the table.</h1>
       <p id="waiting-msg" role="status"></p><div class="waiting-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div id="waiting-table"></div>
       <button id="check-btn" class="secondary">Check again</button>
     </section>
     <section id="screen-taste" hidden>
       <p id="taste-prompt" class="prompt"></p>
       <h1>Which response would you most want to have written?</h1>
-      <p class="dim">Choose a machine answer. The machines vote independently.</p>
-      <div id="taste-candidates"></div>
+      <p class="dim">Lift a lid to taste a machine’s answer. The machines vote independently.</p>
+      <div id="taste-table"></div>
+      <details class="read-all"><summary>Read all answers as a list</summary><div id="taste-candidates"></div></details>
     </section>
     <section id="screen-challenge" hidden>
       <p id="preview-note" class="notice" hidden>Creator preview. You already know your answer; this won’t count as a recipient attempt.</p>
@@ -57,9 +60,11 @@
       <h1 id="challenge-prompt" class="prompt"></h1>
       <form id="guess-form">
         <p id="guess-instructions">Which answer did your friend write? Choose one guess, and optionally a favorite.</p>
-        <div id="challenge-candidates"></div>
+        <div id="challenge-table"></div>
+        <details class="read-all" id="challenge-list"><summary>Read all answers as a list</summary><div id="challenge-candidates"></div></details>
         <label id="skip-favorite"><input type="radio" name="taste" value="" checked /> No favorite selected</label>
         <p id="visibility-note" class="dim">After you reveal, the creator can see your guess and favorite. Your unfinished choices stay private.</p>
+        <p id="guess-status" class="status" role="status"></p>
         <button id="lock-btn" type="submit">Lock my choices</button>
       </form>
       <p id="locked-note" role="status" hidden>Choices locked. Take your time—reveal when you’re ready.</p>
@@ -67,15 +72,22 @@
     </section>
     <section id="screen-ready" hidden>
       <h1>The votes are in.</h1><p id="ready-prompt" class="prompt"></p>
-      <div id="ready-table"></div><button id="creator-reveal-btn">Reveal the votes</button>
+      <div id="ready-scene"></div>
+      <details class="read-all"><summary>Read all answers as a list</summary><div id="ready-table"></div></details>
+      <button id="creator-reveal-btn">Reveal the votes</button>
     </section>
     <section id="screen-reveal" hidden>
-      <div class="reveal-masthead"><img src="/assets/the-reveal-v1.png" alt="A silver cloche lifts to reveal a manuscript in a burst of confetti." width="1536" height="1024" loading="lazy" /><p class="eyebrow">THE LID COMES OFF</p></div>
-      <div id="reveal-content"></div>
-      <div class="actions"><button id="share-btn">Share this challenge</button><a id="owner-link" hidden>See recipient results</a></div>
-      <p id="share-status" role="status"></p>
-      <h2 id="next-invitation">Now make me find you.</h2>
-      <button id="next-btn">Your turn: try hiding yourself</button>
+      <p class="eyebrow">THE LID COMES OFF</p>
+      <h1 id="dinner-heading" class="dinner-heading">Dinner is served.</h1>
+      <div id="reveal-scene"></div>
+      <div class="dinner-controls"><button id="skip-btn" class="secondary">Skip to the results</button><button id="replay-btn" class="secondary" hidden>Replay the dinner</button></div>
+      <div id="reveal-after">
+        <div id="reveal-content"></div>
+        <div class="actions"><button id="share-btn">Share this challenge</button><a id="owner-link" hidden>See recipient results</a></div>
+        <p id="share-status" role="status"></p>
+        <h2 id="next-invitation">Now make me find you.</h2>
+        <button id="next-btn">Your turn: try hiding yourself</button>
+      </div>
     </section>
     <section id="screen-owner" hidden>
       <img class="owner-host" src="/assets/cloche-host-v1.png" alt="" width="1024" height="1024" loading="lazy" /><p class="eyebrow">YOUR CHALLENGE</p><h1>Did they find you?</h1>
@@ -90,6 +102,6 @@
       <a href="/">Back to the start</a>
     </section>
   </main>
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -19,3 +19,9 @@ The welcome composition uses a split layout on desktop and places the illustrati
 Verification: JavaScript syntax, TypeScript, and whitespace checks passed. Welcome and reveal layouts were inspected at 1280px and 390px widths; their document width matched the viewport. The welcome, host, and reveal images loaded; the inspected browser flow had no console errors. Original PNG outputs are retained in the project without destructive image edits.
 
 Future extensions could add matching persona portraits for post-reveal attribution and distinct illustration variants for round outcomes. Keep those separate from anonymous answer presentation.
+
+## Table play scene (November 3, 2026)
+
+The round now plays at a drawn dinner table ([table play](./spec-table-play.md)). Guests, cloches, suspicion picks, and forks are small inline SVG/CSS pieces in `src/web/public/table.js` and `table.css`, in the same plum, ivory, chartreuse, coral, and silver palette. No new image files were added.
+
+Pre-reveal guests are identical masked silhouettes; they unmask only from post-reveal ballots, so the drawing carries no answer key. The reveal screen's animated table replaces the `the-reveal-v1.png` masthead, which stays in `assets/` but is no longer placed. `tasting-table-v1.png` (welcome) and `cloche-host-v1.png` (waiting, creator results) are unchanged.

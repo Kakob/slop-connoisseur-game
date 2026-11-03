@@ -88,9 +88,6 @@ input[type=radio] { accent-color: #49603a; color-scheme: light; }
 .waiting-dots { display: flex; justify-content: center; gap: 8px; margin: 25px 0; }
 .waiting-dots i { width: 5px; height: 5px; border-radius: 50%; background: #d1df64; animation: waiting-pulse 1.5s ease-in-out infinite; }
 .waiting-dots i:nth-child(2) { animation-delay: .2s; }.waiting-dots i:nth-child(3) { animation-delay: .4s; }
-.reveal-masthead { position: relative; margin-bottom: 28px; border-bottom: 1px solid #624153; padding-bottom: 18px; }
-.reveal-masthead img { width: 100%; height: 190px; object-fit: cover; object-position: center 52%; border-radius: 4px; }
-.reveal-masthead .eyebrow { margin-top: 15px; font-size: 10px; }
 #screen-reveal { animation: reveal-enter 450ms ease-out; }
 .owner-host { width: 108px; height: 108px; object-fit: cover; float: right; border-radius: 50%; margin-left: 18px; }
 @keyframes host-bob { 50% { transform: translateY(-7px) rotate(-2deg); } }
@@ -108,7 +105,7 @@ input[type=radio] { accent-color: #49603a; color-scheme: light; }
   .welcome-copy h1 { font-size: 43px; }.welcome-copy .eyebrow { font-size: 9px; }
   .invitation-strip { grid-template-columns: 1fr; gap: 0; margin-top: 32px; }
   .invitation-strip p { margin: 10px 0; }.invitation-strip b { margin-bottom: 3px; }
-  .round-progress { gap: 20px; font-size: 10px; }.reveal-masthead img { height: 150px; }
+  .round-progress { gap: 20px; font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

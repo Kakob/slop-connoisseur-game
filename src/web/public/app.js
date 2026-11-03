@@ -1,5 +1,10 @@
 /* The server owns game state; the browser keeps only a writing draft. */
+import { tableModel, ownLabelFor, mountTable, revealBeats, playBeats, renderFinal } from '/table.js';
 const $ = id => document.getElementById(id);
+let challengeScene = null;
+let dinner = null;
+let animateNextReveal = false;
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 let state = null;
 let challenge = null;
 let creatorResults = null;
@@ -9,6 +14,7 @@ let busy = false;
 let pollTimer;
 const pathMatch = location.pathname.match(/^\/(challenge|results)\/([^/]+)$/);
 function show(name) {
+  if (name !== 'reveal') dinner?.abort();
   document.body.dataset.screen = name;
   const progress = $('round-progress');
   progress.hidden = ['start', 'owner', 'error'].includes(name);
@@ -36,6 +42,11 @@ async function api(path, body) {
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status}).`);
   return data;
 }
+/** Shows the waiting screen with masked guests busy at an empty table. */
+function waiting(message, phase = 'cooking') {
+  show('waiting'); $('waiting-msg').textContent = message;
+  mountTable($('waiting-table'), { phase });
+}
 function showError(error) {
   clearTimeout(pollTimer);
   if (state) clearInterval(state.timer);
@@ -57,11 +68,14 @@ function wordStatus() {
 function tick() {
   const left = Math.max(0, state.deadline - Date.now());
   $('countdown').textContent = `00:${String(Math.ceil(left / 1000)).padStart(2, '0')}`;
+  $('countdown').style.setProperty('--p', String(state.total ? left / state.total : 0));
+  $('countdown').classList.toggle('low', left < 10000);
   if (!left) submit();
 }
 function writing(round) {
   if (state) clearInterval(state.timer);
-  state = { ...round, deadline: Date.now() + Math.max(0, round.deadline - round.serverNow), submitted: false };
+  const remaining = Math.max(0, round.deadline - round.serverNow);
+  state = { ...round, deadline: Date.now() + remaining, total: remaining, submitted: false };
   remember('slop-round', state.roundId);
   $('writing-prompt').textContent = round.promptText;
   $('response').value = recalled(`draft-${round.roundId}`) || '';
@@ -73,7 +87,7 @@ async function startRound() {
   if (busy) return;
   busy = true; clearTimeout(pollTimer);
   if (state) clearInterval(state.timer);
-  show('waiting'); $('waiting-msg').textContent = 'The machines are starting their answers…';
+  waiting('The machines are starting their answers…');
   try {
     let requestId = recalled('slop-pending-start');
     if (!requestId) { requestId = crypto.randomUUID(); remember('slop-pending-start', requestId); }
@@ -89,7 +103,7 @@ async function startRound() {
 async function submit() {
   if (!state || state.submitted) return;
   state.submitted = true; clearInterval(state.timer);
-  show('waiting'); $('waiting-msg').textContent = 'Your answer is locked. Waiting for the machines…';
+  waiting('Your answer is locked. Waiting for the machines…');
   try {
     const result = await api(`/api/round/${state.roundId}/submit`, { text: $('response').value.trim() || null });
     renderTaste(result.candidates);
@@ -97,6 +111,11 @@ async function submit() {
 }
 function renderTaste(candidates) {
   $('taste-prompt').textContent = state.promptText;
+  const ownLabel = ownLabelFor(candidates);
+  mountTable($('taste-table'), {
+    plates: tableModel(candidates, { ownLabel, ownText: $('response').value }), viewer: 'creator', phase: 'serving',
+    actions: [{ key: 'taste', text: 'I wish I’d written this' }],
+  }, { onAction: (_, label) => castTaste(label) });
   $('taste-candidates').replaceChildren();
   for (const c of candidates) {
     const button = element('button', `${c.label}. ${c.text}`, 'candidate');
@@ -106,7 +125,7 @@ function renderTaste(candidates) {
 }
 async function castTaste(label) {
   if (busy) return; busy = true;
-  show('waiting'); $('waiting-msg').textContent = 'The machines are looking for you…';
+  waiting('The machines are looking for you…', 'judging');
   try { ready(await api(`/api/round/${state.roundId}/taste`, { label })); busy = false; }
   catch (error) { showError(error); }
 }
@@ -114,6 +133,8 @@ function ready(results) {
   creatorResults = results;
   $('ready-prompt').textContent = results.promptText;
   $('ready-table').replaceChildren(...results.table.map(r => card(r.label, r.text)));
+  const scene = mountTable($('ready-scene'), { plates: tableModel(results.table, { ownLabel: results.humanLabel }), viewer: 'creator', phase: 'ready' });
+  scene.root.querySelector('.caption').textContent = 'The guests have made up their minds.';
   show('ready');
 }
 async function resumeRound(id = state?.roundId || recalled('slop-round')) {
@@ -127,7 +148,7 @@ async function resumeRound(id = state?.roundId || recalled('slop-round')) {
       if (round.selectedTaste) return castTaste(round.selectedTaste);
       return renderTaste(round.candidates);
     }
-    show('waiting'); $('waiting-msg').textContent = 'Your round is still being prepared…';
+    waiting('Your round is still being prepared…');
     pollTimer = setTimeout(() => resumeRound(id), 1500);
   } catch (error) { showError(error); }
 }
@@ -144,13 +165,20 @@ function renderChallenge(data) {
       const label = element('label', '', 'choice');
       const input = document.createElement('input'); input.type = 'radio'; input.name = name; input.value = c.label;
       input.setAttribute('aria-label', `${text}: answer ${c.label}`);
-      if (name === 'detection') input.required = !locked;
       input.disabled = locked;
       input.checked = data.choices?.[name] === c.label;
       label.append(input, document.createTextNode(text)); article.append(label);
     }
     $('challenge-candidates').append(article);
   }
+  challengeScene = mountTable($('challenge-table'), {
+    plates: tableModel(data.candidates), viewer: 'recipient', phase: locked ? 'locked' : 'guessing',
+    actions: [{ key: 'detection', text: 'My friend cooked this' }, { key: 'taste', text: 'My favorite', secondary: true }],
+  }, { onAction: choose });
+  challengeScene.mark('detection', data.choices?.detection ?? null);
+  challengeScene.mark('taste', data.choices?.taste ?? null);
+  challengeScene.setLocked(locked);
+  $('guess-status').textContent = '';
   $('skip-favorite').hidden = locked;
   $('skip-favorite').querySelector('input').checked = !data.choices?.taste;
   $('lock-btn').hidden = locked;
@@ -160,6 +188,16 @@ function renderChallenge(data) {
   $('guess-instructions').textContent = locked ? 'The original lineup. Reveal whenever you’re ready.' : 'Which answer did your friend write? Choose one guess, and optionally a favorite.';
   show('challenge');
 }
+/** Places a recipient choice from the table; the form's radios stay the single source of truth. */
+function choose(kind, label) {
+  const form = $('guess-form');
+  if (kind === 'taste' && form.querySelector('input[name="taste"]:checked')?.value === label) label = '';
+  const input = [...form.querySelectorAll(`input[name="${kind}"]`)].find(i => i.value === label);
+  if (!input || input.disabled) return;
+  input.checked = true;
+  challengeScene?.mark(kind, label || null);
+  $('guess-status').textContent = '';
+}
 async function openChallenge(id) {
   try { renderChallenge(await api(`/api/challenge/${id}`)); }
   catch (error) { showError(error); }
@@ -167,8 +205,9 @@ async function openChallenge(id) {
 function renderResults(r, choices, creator) {
   const box = $('reveal-content'); box.replaceChildren();
   box.append(element('p', r.promptText, 'prompt'));
+  dinner?.abort();
   const heading = creator ? `You were ${r.humanLabel}.` : choices ? (choices.detection === r.humanLabel ? 'You found your friend.' : `Your friend wrote ${r.humanLabel}. You guessed ${choices.detection}.`) : `Your answer was ${r.humanLabel}.`;
-  box.append(element('h1', heading));
+  box.append(element('h2', heading, 'result-heading'));
   if (r.blank) box.append(element('p', 'No response was submitted. This round earns no Deception or Taste score.', 'notice'));
   box.append(element('p', `${r.machinesFooled} of ${r.machineJudgeCount} AI judges missed the human answer.`));
   box.append(element('p', r.machineTasteBallots.length ? `${r.machineTasteVotesForHuman} of ${r.machineTasteBallots.length} AI Taste judges preferred the human answer.` : 'AI Taste results are unavailable; no Taste ballots succeeded.'));
@@ -196,9 +235,29 @@ function renderResults(r, choices, creator) {
   $('next-invitation').textContent = creator ? 'Make them look twice.' : 'Now make me find you.';
   $('next-btn').textContent = creator ? 'Write another round' : 'Your turn: try hiding yourself';
   show('reveal');
+  const animate = animateNextReveal && !reducedMotion();
+  animateNextReveal = false;
+  serveDinner(r, choices, creator, animate);
+}
+/** Plays (or draws) the reveal at the table from post-reveal results only. */
+function serveDinner(r, choices, creator, animate) {
+  dinner?.abort();
+  const viewer = creator ? 'creator' : 'recipient';
+  const beats = revealBeats(r, { viewer, choices });
+  const scene = mountTable($('reveal-scene'), {
+    plates: tableModel(r.table, creator ? { ownLabel: r.humanLabel } : {}), viewer, phase: 'reveal', guestCount: beats[0].guests.length,
+  });
+  const finish = () => { $('reveal-after').hidden = false; $('skip-btn').hidden = true; $('replay-btn').hidden = false; };
+  $('replay-btn').onclick = () => serveDinner(r, choices, creator, !reducedMotion());
+  if (!animate) { renderFinal(scene.root, beats); finish(); return; }
+  $('reveal-after').hidden = true; $('skip-btn').hidden = false; $('replay-btn').hidden = true;
+  const controller = new AbortController(); dinner = controller;
+  $('skip-btn').onclick = () => controller.abort();
+  playBeats(scene.root, beats, { signal: controller.signal }).then(() => { if (dinner === controller) finish(); });
 }
 async function revealCreator() {
   try {
+    animateNextReveal = true;
     const link = await api(`/api/round/${creatorResults.roundId}/challenge`, {});
     shareId = link.challengeId; sourceChallengeId = null; renderResults(creatorResults, null, true);
   } catch (error) { showError(error); }
@@ -249,10 +308,16 @@ $('response').oninput = () => {
 $('guess-form').onsubmit = async event => {
   event.preventDefault(); if (busy) return; busy = true;
   const form = new FormData(event.currentTarget);
+  if (!form.get('detection')) { busy = false; $('guess-status').textContent = 'Plant your pick in the dish you think your friend cooked first.'; return; }
   try { renderChallenge(await api(`/api/challenge/${challenge.challengeId}/lock`, { detection: form.get('detection'), taste: form.get('taste') || null })); busy = false; }
   catch (error) { showError(error); }
 };
+$('guess-form').onchange = event => {
+  const input = event.target;
+  if (input.name === 'detection' || input.name === 'taste') challengeScene?.mark(input.name, input.value || null);
+};
 $('challenge-reveal-btn').onclick = async () => {
+  animateNextReveal = true;
   try { renderChallenge(await api(`/api/challenge/${challenge.challengeId}/reveal`, {})); }
   catch (error) { showError(error); }
 };

@@ -50,6 +50,37 @@
 .plate.own:hover { background: transparent; transform: none; }
 .plate.own .dish { fill: #d1df64; }
 .plate-label { font: 700 13px/1 system-ui, sans-serif; letter-spacing: .12em; }
+
+/* Creatures under the lids: species shows the length tier, size shows what it is worth. */
+.cloche-svg .critter { transform-box: view-box; transform-origin: 50% 85%; scale: var(--worth, 1); transition: scale .5s cubic-bezier(.3, 1.6, .5, 1), filter .5s; }
+.plate:not(.open):not(.own):not(.human) .critter { visibility: hidden; }
+.plate:not(.open):not(.own):not(.human) .critter .tentacle { visibility: visible; }
+.plate.open .critter, .plate.own .critter, .plate.human .critter { scale: calc(var(--worth, 1) * 1.2); }
+.plate[data-kind="safe"] .critter { opacity: .85; }
+.plate[data-kind="bold"] .critter { filter: drop-shadow(0 0 2px #e8b84a); }
+.plate[data-kind="dangerous"] .critter { filter: drop-shadow(0 0 3px #f08a6c); }
+.plate[data-kind="dangerous"]:not(.open):not(.own) .critter .tentacle { animation: wriggle 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 0 100%; }
+.plate.open[data-kind="dangerous"] .critter, .plate.own[data-kind="dangerous"] .critter { animation: pulse 1.6s ease-in-out infinite; }
+.plate.open[data-kind="bold"] .critter, .plate.own[data-kind="bold"] .critter { animation: bob 1.8s ease-in-out infinite; }
+.plate.open[data-kind="safe"] .critter .zzz { animation: snore 2.4s ease-in-out infinite; }
+.plate.own .lid { transform: translate(0, -30px) rotate(-6deg); }
+.plate.wince .critter { animation: wince .45s ease; }
+.plate.starved .critter { filter: grayscale(.9); opacity: .55; }
+.stake { min-height: 1.2em; font: 700 8.5px/1.2 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #67513c; opacity: 0; transition: opacity .3s; }
+.plate.open .stake, .plate.own .stake, .plate.human .stake { opacity: 1; }
+.plate[data-kind="dangerous"] .stake { color: #b4432c; }
+.reading-stake { display: block; margin-top: 2px; font: 600 11px/1.4 system-ui, sans-serif; letter-spacing: .06em; color: #8a3d2e; }
+.reading-stake:empty { display: none; }
+
+/* The writer's own creature, live while typing. */
+.write-creature { display: flex; align-items: center; gap: 12px; margin: 6px 0 0; }
+.write-creature svg { width: 150px; height: auto; overflow: visible; }
+.write-creature .dish { fill: #fffdf6; stroke: #b9aab0; stroke-width: 1.2; }
+.write-creature.morph svg { animation: morph .5s cubic-bezier(.3, 1.6, .5, 1); }
+.write-creature .write-stake { font: 700 12px/1.3 system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #d1df64; }
+.write-creature[data-kind="dangerous"] .write-stake { color: #f08a6c; }
+.write-creature[data-kind="dangerous"] .critter { filter: drop-shadow(0 0 3px #f08a6c); animation: pulse 1.6s ease-in-out infinite; transform-box: view-box; transform-origin: 50% 85%; }
+.write-creature[data-kind="bold"] .critter { animation: bob 1.8s ease-in-out infinite; transform-box: view-box; transform-origin: 50% 85%; }
 .plate-badge { min-height: 1.3em; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #8a3d2e; }
 .picks, .forks { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; min-height: 22px; }
 .picks { margin-bottom: 4px; }
@@ -113,6 +144,16 @@
 @keyframes burst { from { opacity: 1; transform: scale(.2); } 60% { opacity: 1; } to { opacity: 0; transform: scale(1.3) translateY(-8px); } }
 @keyframes serve { from { opacity: 0; transform: translateY(-26px) scale(.8); } }
 @keyframes slide-up { from { opacity: 0; transform: translateY(8px); } }
+@keyframes wriggle { 50% { transform: rotate(-12deg); } }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+@keyframes bob { 50% { transform: translateY(-1.5px); } }
+@keyframes snore { 50% { opacity: .2; transform: translate(2px, -2px); } }
+@keyframes wince { 30% { transform: translateX(-2px) scaleY(.88); } 60% { transform: translateX(2px); } }
+@keyframes morph { from { transform: scale(.6) rotate(-8deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .critter, .critter *, .write-creature svg, .plate.wince .critter { animation: none !important; transition: none !important; }
+}
 
 @media (max-width: 620px) {
   .plates { grid-template-columns: repeat(3, 1fr); row-gap: 4px; }

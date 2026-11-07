@@ -1,5 +1,6 @@
 /* The server owns game state; the browser keeps only a writing draft. */
 import { tableModel, ownLabelFor, mountTable, revealBeats, playBeats, renderFinal } from '/table.js';
+import { wordCount, creatureFor, creatureSvg, stakeTag } from '/creature.js';
 const $ = id => document.getElementById(id);
 let challengeScene = null;
 let dinner = null;
@@ -12,6 +13,8 @@ let shareId = null;
 let sourceChallengeId = null;
 let busy = false;
 let pollTimer;
+/** Public stakes tunables ({riskTiers, deceptionBase}); null hides the creatures. */
+let stakes = null;
 const pathMatch = location.pathname.match(/^\/(challenge|results)\/([^/]+)$/);
 function show(name) {
   if (name !== 'reveal') dinner?.abort();
@@ -54,7 +57,6 @@ function showError(error) {
 }
 function remember(key, value) { try { localStorage.setItem(key, value); } catch {} }
 function recalled(key) { try { return localStorage.getItem(key); } catch { return null; } }
-function wordCount(text) { return text.trim() ? text.trim().split(/\s+/).length : 0; }
 function card(label, text) {
   const article = element('article', '', 'answer');
   article.append(element('h2', `Answer ${label}`, 'answer-label'), element('p', text, 'answer-text'));
@@ -64,6 +66,21 @@ function wordStatus() {
   const n = wordCount($('response').value);
   const tier = state.riskTiers.find(t => n >= t.min && n <= t.max);
   $('word-status').textContent = `${n} / ${state.maxWords} words${tier ? ` · ${tier.name} ×${tier.multiplier}` : ''}`;
+  drawWriteCreature();
+}
+/** Draws the writer's own creature; it changes species as the answer crosses a length tier. */
+function drawWriteCreature() {
+  const box = $('write-creature');
+  if (!stakes) { box.hidden = true; return; }
+  const creature = creatureFor($('response').value, stakes);
+  const look = `${creature.kind}:${creature.traits.hue}`;
+  if (box.dataset.look === look) return;
+  const morphed = box.dataset.kind && box.dataset.kind !== creature.kind;
+  box.dataset.look = look; box.dataset.kind = creature.kind;
+  box.innerHTML = `<svg viewBox="0 0 80 54"><ellipse class="dish" cx="40" cy="47" rx="37" ry="6"/>${creatureSvg(creature)}</svg>`;
+  box.append(element('span', creature.kind === 'blank' ? 'Nothing on the plate yet' : stakeTag(creature), 'write-stake'));
+  box.hidden = false;
+  if (morphed) { box.classList.remove('morph'); void box.offsetWidth; box.classList.add('morph'); }
 }
 function tick() {
   const left = Math.max(0, state.deadline - Date.now());
@@ -113,7 +130,7 @@ function renderTaste(candidates) {
   $('taste-prompt').textContent = state.promptText;
   const ownLabel = ownLabelFor(candidates);
   mountTable($('taste-table'), {
-    plates: tableModel(candidates, { ownLabel, ownText: $('response').value }), viewer: 'creator', phase: 'serving',
+    plates: tableModel(candidates, { ownLabel, ownText: $('response').value }), viewer: 'creator', phase: 'serving', stakes,
     actions: [{ key: 'taste', text: 'I wish I’d written this' }],
   }, { onAction: (_, label) => castTaste(label) });
   $('taste-candidates').replaceChildren();
@@ -133,7 +150,7 @@ function ready(results) {
   creatorResults = results;
   $('ready-prompt').textContent = results.promptText;
   $('ready-table').replaceChildren(...results.table.map(r => card(r.label, r.text)));
-  const scene = mountTable($('ready-scene'), { plates: tableModel(results.table, { ownLabel: results.humanLabel }), viewer: 'creator', phase: 'ready' });
+  const scene = mountTable($('ready-scene'), { plates: tableModel(results.table, { ownLabel: results.humanLabel }), viewer: 'creator', phase: 'ready', stakes });
   scene.root.querySelector('.caption').textContent = 'The guests have made up their minds.';
   show('ready');
 }
@@ -172,7 +189,7 @@ function renderChallenge(data) {
     $('challenge-candidates').append(article);
   }
   challengeScene = mountTable($('challenge-table'), {
-    plates: tableModel(data.candidates), viewer: 'recipient', phase: locked ? 'locked' : 'guessing',
+    plates: tableModel(data.candidates), viewer: 'recipient', phase: locked ? 'locked' : 'guessing', stakes,
     actions: [{ key: 'detection', text: 'My friend cooked this' }, { key: 'taste', text: 'My favorite', secondary: true }],
   }, { onAction: choose });
   challengeScene.mark('detection', data.choices?.detection ?? null);
@@ -245,7 +262,7 @@ function serveDinner(r, choices, creator, animate) {
   const viewer = creator ? 'creator' : 'recipient';
   const beats = revealBeats(r, { viewer, choices });
   const scene = mountTable($('reveal-scene'), {
-    plates: tableModel(r.table, creator ? { ownLabel: r.humanLabel } : {}), viewer, phase: 'reveal', guestCount: beats[0].guests.length,
+    plates: tableModel(r.table, creator ? { ownLabel: r.humanLabel } : {}), viewer, phase: 'reveal', guestCount: beats[0].guests.length, stakes,
   });
   const finish = () => { $('reveal-after').hidden = false; $('skip-btn').hidden = true; $('replay-btn').hidden = false; };
   $('replay-btn').onclick = () => serveDinner(r, choices, creator, !reducedMotion());
@@ -326,4 +343,6 @@ $('start-btn').onclick = startRound; $('next-btn').onclick = startRound; $('retr
 $('submit-btn').onclick = () => { if ($('response').value.trim()) submit(); };
 $('share-btn').onclick = share; $('check-btn').onclick = () => { busy = false; resumeRound(); };
 $('recover-btn').onclick = () => { busy = false; if (challenge) openChallenge(challenge.challengeId); else if (pathMatch) pathMatch[1] === 'results' ? owner(pathMatch[2]) : openChallenge(pathMatch[2]); else resumeRound(); };
+// Stakes are cosmetic: if they fail to load, the game plays with empty cloches.
+stakes = await api('/api/stakes').catch(() => null);
 if (pathMatch) pathMatch[1] === 'challenge' ? openChallenge(pathMatch[2]) : owner(pathMatch[2]); else home();

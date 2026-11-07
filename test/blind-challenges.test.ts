@@ -195,3 +195,15 @@ describe('Blind Tasting HTTP boundaries', () => {
     expect(result.blank).toBe(true);
   });
 });
+
+describe('Stakes endpoint', () => {
+  it('serves only the public length tiers and base score', async () => {
+    const base = await serve(env());
+    const b = browser(base);
+    const stakes = await b.call('/api/stakes');
+    expect(stakes.status).toBe(200);
+    expect(Object.keys(stakes.data).sort()).toEqual(['deceptionBase', 'maxWords', 'riskTiers']);
+    expect(stakes.data.riskTiers).toEqual(defaultTunables.riskTiers);
+    expect(stakes.data.deceptionBase).toBe(defaultTunables.scoring.deceptionBase);
+  });
+});

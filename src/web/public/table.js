@@ -3,6 +3,7 @@
  * Pure beat derivation (testable, no DOM at import) plus a dependency-free DOM scene.
  * Before reveal the scene sees only {label, text}; guests unmask only from post-reveal ballots.
  */
+import { creatureFor, creatureSvg, pointsFor, stakeTag } from './creature.js';
 
 /** Presentation timings in milliseconds — the only place animation pacing is set. */
 export const TIMING = {
@@ -73,8 +74,10 @@ export function revealBeats(results, { viewer = 'creator', choices = null } = {}
   }
 
   // Finds first, then the fooled meter fills: the crescendo is the human getting away with it.
+  let found = 0;
   for (const b of results.detectionBallots.filter(b => b.chosenLabel === human)) {
-    beats.push({ type: 'found', who: b.judgeDisplayName, label: b.chosenLabel, text: `${b.judgeDisplayName} found the human.` });
+    found += 1;
+    beats.push({ type: 'found', who: b.judgeDisplayName, label: b.chosenLabel, found, of: judges, text: `${b.judgeDisplayName} found the human.` });
   }
   let fooled = 0;
   for (const b of results.detectionBallots.filter(b => b.chosenLabel !== human)) {
@@ -109,14 +112,15 @@ const GUEST_SVG = `<svg viewBox="0 0 60 64" aria-hidden="true" class="guest-svg"
   <g class="mask"><path d="M12 24c4-4 11-5 18-2 7-3 14-2 18 2-1 6-6 9-11 8-3 0-5-3-7-3s-4 3-7 3c-5 1-10-2-11-8z"/>
   <ellipse class="eye" cx="22.5" cy="25.5" rx="3.4" ry="2.2"/><ellipse class="eye" cx="37.5" cy="25.5" rx="3.4" ry="2.2"/></g>
 </svg>`;
-const CLOCHE_SVG = `<svg viewBox="0 0 80 54" aria-hidden="true" class="cloche-svg">
-  <ellipse class="dish" cx="40" cy="47" rx="37" ry="6"/>
+const clocheSvg = (critter = '') => `<svg viewBox="0 0 80 54" aria-hidden="true" class="cloche-svg">
+  <ellipse class="dish" cx="40" cy="47" rx="37" ry="6"/>${critter}
   <g class="lid"><path d="M8 44c0-18 14-30 32-30s32 12 32 30z"/><path class="shine" d="M18 38c1-9 7-16 15-18"/>
   <circle class="knob" cx="40" cy="11" r="4"/></g>
 </svg>`;
 const FORK_SVG = '<svg viewBox="0 0 12 24" aria-hidden="true"><path d="M2 1v7c0 2 1.5 3 3 3.4V23h2V11.4C8.5 11 10 10 10 8V1H8.6v6H7.4V1H6v6H4.6V1H3.4v6H3V1z" fill="currentColor"/></svg>';
 
 const guestInfo = new WeakMap();
+const creatureInfo = new WeakMap();
 
 function h(tag, className, text) {
   const el = document.createElement(tag);
@@ -175,8 +179,11 @@ function deliver(root, who, label, kind, animate) {
  * Builds the table scene. Plates come from tableModel (label/text only); guests are masked
  * silhouettes until a reveal beat unmasks them. Returns small controls for the caller.
  */
-export function mountTable(el, { plates = [], viewer = 'creator', phase = 'tasting', actions = [], guestCount = 5 } = {}, { onAction = () => {} } = {}) {
+export function mountTable(el, { plates = [], viewer = 'creator', phase = 'tasting', actions = [], guestCount = 5, stakes = null } = {}, { onAction = () => {} } = {}) {
   const root = h('div', 'scene'); root.dataset.phase = phase; root.dataset.viewer = viewer;
+  // Creatures come only from each plate's text and the public stakes tunables.
+  const creatures = new Map(stakes ? plates.map(p => [p.label, creatureFor(p.text, stakes)]) : []);
+  creatureInfo.set(root, creatures);
 
   const seats = h('div', 'seats');
   const order = Array.from({ length: guestCount }, (_, i) => i);
@@ -198,8 +205,10 @@ export function mountTable(el, { plates = [], viewer = 'creator', phase = 'tasti
     plate.type = 'button'; plate.dataset.label = p.label;
     plate.style.setProperty('--i', String(i));
     plate.setAttribute('aria-label', p.own ? `Answer ${p.label}, your own answer` : `Open answer ${p.label}`);
-    const cloche = h('span', 'cloche'); cloche.innerHTML = CLOCHE_SVG;
-    plate.append(h('span', 'picks'), cloche, h('span', 'plate-label', p.label), h('span', 'plate-badge', p.own ? 'Yours' : ''), h('span', 'forks'));
+    const creature = creatures.get(p.label);
+    const cloche = h('span', 'cloche'); cloche.innerHTML = clocheSvg(creature ? creatureSvg(creature) : '');
+    if (creature) plate.dataset.kind = creature.kind;
+    plate.append(h('span', 'picks'), cloche, h('span', 'plate-label', p.label), h('span', 'stake', creature ? stakeTag(creature) : ''), h('span', 'plate-badge', p.own ? 'Yours' : ''), h('span', 'forks'));
     plate.onclick = () => open(p.label);
     lazySusan.append(plate);
   }
@@ -209,8 +218,9 @@ export function mountTable(el, { plates = [], viewer = 'creator', phase = 'tasti
   const meter = h('div', 'meter'); meter.hidden = true;
   const caption = h('p', 'caption'); caption.setAttribute('aria-live', 'polite');
   const reading = h('div', 'reading'); reading.hidden = true;
-  const readingLabel = h('p', 'reading-label'); const readingText = h('p', 'reading-text'); const readingActions = h('div', 'reading-actions');
+  const readingLabel = h('p', 'reading-label'); const readingStake = h('span', 'reading-stake'); const readingText = h('p', 'reading-text'); const readingActions = h('div', 'reading-actions');
   reading.append(readingLabel, readingText, readingActions);
+  readingLabel.after(readingStake);
 
   root.append(seats, cloth, meter, caption);
   let hand = null;
@@ -235,6 +245,8 @@ export function mountTable(el, { plates = [], viewer = 'creator', phase = 'tasti
     current = label;
     for (const b of root.querySelectorAll('.plate')) { const on = b.dataset.label === label; b.classList.toggle('open', on); b.setAttribute('aria-pressed', String(on)); }
     readingLabel.textContent = `Answer ${p.label}`; readingText.textContent = p.text;
+    const creature = creatures.get(p.label);
+    readingStake.textContent = creature ? `${stakeTag(creature)} points if this were the human’s and fooled every judge` : '';
     readingActions.replaceChildren(...actions.map(a => {
       const b = h('button', a.secondary ? 'secondary' : '', a.text); b.type = 'button';
       b.disabled = root.classList.contains('locked');
@@ -301,6 +313,7 @@ export function applyBeat(root, beat, animate = false) {
         plate.classList.add('open', 'human');
         plate.querySelector('.plate-badge').textContent = beat.blank ? 'Empty plate' : beat.who === YOU ? 'You' : 'Your friend';
         if (animate) { const burst = h('span', 'burst'); plate.append(burst); setTimeout(() => burst.remove(), 1400); }
+        feed(root, beat.label, 0, beat.of);
       }
       root.querySelector(`.seat.human`)?.classList.add('unmasked', 'spotlight');
       const meter = root.querySelector('.meter');
@@ -322,6 +335,7 @@ export function applyBeat(root, beat, animate = false) {
       mark?.classList.add(beat.type === 'found' ? 'hit' : 'miss');
       seat?.classList.add(beat.type);
       say(seat, beat.type === 'found' ? 'Aha!' : '?!');
+      if (beat.type === 'found') feed(root, beat.label, beat.found, beat.of);
       if (beat.type === 'fooled') {
         const segs = root.querySelectorAll('.meter i');
         segs[beat.fooled - 1]?.classList.add('on');
@@ -332,6 +346,20 @@ export function applyBeat(root, beat, animate = false) {
     case 'favorite': deliver(root, beat.who, beat.label, 'fork', animate); say(seat, '♥'); break;
     case 'summary': root.dataset.phase = 'done'; break;
   }
+}
+
+/** Sizes the human's creature to the points it would earn after `found` of `of` judges spotted it. */
+function feed(root, label, found, of) {
+  const creature = creatureInfo.get(root)?.get(label);
+  const plate = plateEl(root, label);
+  if (!creature || !plate) return;
+  const points = pointsFor(creature, found, of);
+  const share = creature.maxPoints > 0 ? points / creature.maxPoints : 0;
+  plate.style.setProperty('--worth', String(0.4 + 0.6 * share));
+  plate.classList.toggle('starved', share === 0);
+  if (found > 0) { plate.classList.remove('wince'); void plate.offsetWidth; plate.classList.add('wince'); }
+  const tag = plate.querySelector('.stake');
+  if (tag) tag.textContent = creature.kind === 'blank' ? 'Empty · 0' : `${creature.tier} · worth ${points}`;
 }
 
 function wait(ms, signal) {

@@ -133,6 +133,11 @@ export function createGameServer(input: GameEnv, options: {
         ownRound(roundRead[1]!, playerId);
         return json(res, 200, session.read(roundRead[1]!));
       }
+      if (route === "GET /api/stakes") {
+        // Public tunables only: what each length tier could earn. No round or provenance data.
+        const { riskTiers, maxResponseWords, scoring } = env.tunables;
+        return json(res, 200, { riskTiers, deceptionBase: scoring.deceptionBase, maxWords: maxResponseWords });
+      }
       if (route === "GET /api/me") {
         return json(res, 200, {
           rounds: env.store.where("round", r => r.humanContestantId === playerId).map(r => ({ roundId: r.id, phase: r.phase })),

@@ -17,6 +17,16 @@ The dinner party in the artwork becomes the game board. Every answer is a covere
 | Ready (creator) | The table is set; guests hold their picks behind their backs until you reveal. |
 | Reveal | unmask → suspect (one per AI detection ballot; recipient's own pick first) → lift → fooled (one per missed ballot, meter k/N) → favorite (AI forks, then creator/recipient favorites) → summary and detailed cards. |
 
+## Creatures under the cloches
+
+Each plate hides a creature that shows what that dish is at stake for. Its **species is the length risk tier**: a sleepy blob for SAFE, a horned critter for BOLD, a spiky beast for DANGEROUS whose tentacle escapes even a closed lid, and a single dust mote for an empty plate. Its rim tag shows the most it could earn if it fooled every judge (`deceptionBase × multiplier`, e.g. `BOLD · up to 125`). Colour, eyes, crest, pattern and tilt come from a hash of the text, so every plate looks different and the same text always gives the same creature.
+
+- **Write:** your own creature sits beside the word counter and changes species as you cross a tier boundary.
+- **Taste / Guess:** lifting a lid shows the creature, and the reading panel states its stakes.
+- **Reveal:** the human's creature appears at full size on the lift, then shrinks with each judge who found it. It ends at the round's actual deception points.
+
+The creature is a pure function of `{text}` plus the public tunables served by `GET /api/stakes`, implemented in `src/web/public/creature.js`. Every plate is drawn the same way whoever wrote it, so a creature can say nothing about authorship that the word count doesn't already say. Answer text is never put into creature markup.
+
 ## Rules the scene must keep
 
 - **Pre-reveal the scene receives only `{label, text}`.** Plates sit in the centre in label order, never in front of a seat, so position carries no authorship hint.
